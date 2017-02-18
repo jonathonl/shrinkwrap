@@ -1,5 +1,5 @@
-#ifndef LIBVC_XZ_STREAMBUF_HPP_HPP
-#define LIBVC_XZ_STREAMBUF_HPP_HPP
+#ifndef XZBUF_XZBUF_HPP
+#define XZBUF_XZBUF_HPP
 
 #include <streambuf>
 #include <array>
@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <lzma.h>
 #include <assert.h>
+#include <iostream>
 
 class ixzbuf : public std::streambuf
 {
@@ -299,4 +300,17 @@ private:
   bool at_block_boundary_;
 };
 
-#endif //LIBVC_XZ_STREAMBUF_HPP_HPP
+
+class ixzstream : public std::istream
+{
+public:
+  ixzstream(const std::string& file_path) :
+    std::istream(&sbuf_),
+    sbuf_(file_path)
+  {
+  }
+private:
+  ixzbuf sbuf_;
+};
+
+#endif //XZBUF_XZBUF_HPP
