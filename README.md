@@ -24,7 +24,7 @@ for (std::istreambuf_iterator<char> it(&sbuf); it != std::istreambuf_iterator<ch
 ## ixzstream 
 ```c++
 std::array<char, 1024> buf;
-ixzstream is("xzbuf.hpp.xz");
+ixzstream is("file.xz");
 while (is.read(buf.data(), buf.size()))
   std::cout.write(buf.data(), is.gcount());
 ```
