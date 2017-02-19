@@ -10,7 +10,10 @@ int main(int argc, char* argv[])
   std::istream is(&sbuf);
 
   std::array<char, 64> tmp;
-  is.seekg(-2200, std::ios::end);
+  is.seekg(-7, std::ios::end);
+  auto p = is.tellg();
+  is.read(tmp.data(), 7);
+  is.seekg(p, std::ios::beg);
   while (is)
   {
     is.read(tmp.data(), tmp.size());

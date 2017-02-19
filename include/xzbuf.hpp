@@ -20,12 +20,15 @@ public:
     lzma_index_(nullptr),
     at_block_boundary_(true)
   {
-//      char* end = ((char*)decompressed_buffer_.data()) + decompressed_buffer_.size();
-//      setg(end, end, end);
-
-    lzma_strm_ = LZMA_STREAM_INIT;
+    lzma_block_decoder_ = LZMA_STREAM_INIT;
     fread(stream_header_.data(), stream_header_.size(), 1, fp); // TODO: handle error.
-    reset_lzma_decoder();
+    lzma_res_ = lzma_stream_header_decode(&stream_header_flags_, stream_header_.data());
+    if (lzma_res_ != LZMA_OK)
+    {
+      // TODO: handle error.
+    }
+    char* end = ((char*)decompressed_buffer_.data()) + decompressed_buffer_.size();
+    setg(end, end, end);
   }
 
   ixzbuf(const std::string& file_path)
@@ -35,46 +38,11 @@ public:
 
   ~ixzbuf()
   {
-    lzma_end(&lzma_strm_);
+    lzma_end(&lzma_block_decoder_);
     if (lzma_index_)
       lzma_index_end(lzma_index_, nullptr);
   }
 private:
-  void reset_lzma_decoder()
-  {
-    lzma_res_ = lzma_stream_header_decode(&stream_header_flags_, stream_header_.data());
-    if (lzma_res_ != LZMA_OK)
-    {
-      // TODO: handle error.
-    }
-
-//    lzma_res_ = lzma_stream_decoder(&lzma_strm_, UINT64_MAX, LZMA_IGNORE_CHECK); //LZMA_CONCATENATED);
-
-//    //----------------------------------------------------------------//
-//    // Parse stream header.
-//    lzma_strm_.next_in = stream_header_.data();
-//    lzma_strm_.avail_in = 12;
-//    lzma_strm_.next_out = nullptr;
-//    lzma_strm_.avail_out = 0;
-//    lzma_res_ = lzma_code(&lzma_strm_, LZMA_RUN);
-//    //----------------------------------------------------------------//
-
-//    if (lzma_res_ != LZMA_OK)
-//    {
-//      // TODO: Handle error.
-//    }
-//    else
-//    {
-//      lzma_strm_.next_in = NULL;
-//      lzma_strm_.avail_in = 0;
-//      lzma_strm_.next_out = decompressed_buffer_.data();
-//      lzma_strm_.avail_out = decompressed_buffer_.size();
-//    }
-
-    char* end = ((char*)decompressed_buffer_.data()) + decompressed_buffer_.size();
-    setg(end, end, end);
-  }
-
   std::streambuf::int_type underflow()
   {
     if (gptr() < egptr()) // buffer not exhausted
@@ -82,53 +50,49 @@ private:
 
     while (gptr() >= egptr() && lzma_res_ == LZMA_OK)
     {
-      lzma_strm_.next_out = decompressed_buffer_.data();
-      lzma_strm_.avail_out = decompressed_buffer_.size();
+      lzma_block_decoder_.next_out = decompressed_buffer_.data();
+      lzma_block_decoder_.avail_out = decompressed_buffer_.size();
 
       if (at_block_boundary_)
       {
-        lzma_strm_.total_out = 0;
-        lzma_strm_.total_in = 0;
-        bytes_read_of_current_block_ = 0;
-
         std::vector<std::uint8_t> block_header(LZMA_BLOCK_HEADER_SIZE_MAX);
-        if (lzma_strm_.avail_in == 0 && !feof(fp_))
+        if (lzma_block_decoder_.avail_in == 0 && !feof(fp_))
         {
           replenish_compressed_buffer();
         }
         // TODO: make sure avail_in is greater than 0;
-        std::memcpy(block_header.data(), lzma_strm_.next_in, 1);
-        ++(lzma_strm_.next_in);
-        --(lzma_strm_.avail_in);
+        std::memcpy(block_header.data(), lzma_block_decoder_.next_in, 1);
+        ++(lzma_block_decoder_.next_in);
+        --(lzma_block_decoder_.avail_in);
 
-        lzma_block_.version = 0;
-        lzma_block_.check = stream_header_flags_.check;
-        lzma_block_.filters = lzma_block_filters_buf_;
-        lzma_block_.header_size = lzma_block_header_size_decode (block_header[0]);
-
-        if (lzma_block_.header_size == 0x00)
+        if (block_header[0] == 0x00)
         {
           // Index indicator found
           lzma_res_ = LZMA_STREAM_END;
         }
         else
         {
+          lzma_block_.version = 0;
+          lzma_block_.check = stream_header_flags_.check;
+          lzma_block_.filters = lzma_block_filters_buf_;
+          lzma_block_.header_size = lzma_block_header_size_decode (block_header[0]);
+
           std::size_t bytes_already_copied = 0;
-          if (lzma_strm_.avail_in < (lzma_block_.header_size - 1))
+          if (lzma_block_decoder_.avail_in < (lzma_block_.header_size - 1))
           {
-            bytes_already_copied = lzma_strm_.avail_in;
-            std::memcpy(&block_header[1], lzma_strm_.next_in, bytes_already_copied);
-            lzma_strm_.avail_in -= bytes_already_copied;
-            lzma_strm_.next_in += bytes_already_copied;
-            assert(lzma_strm_.avail_in == 0);
+            bytes_already_copied = lzma_block_decoder_.avail_in;
+            std::memcpy(&block_header[1], lzma_block_decoder_.next_in, bytes_already_copied);
+            lzma_block_decoder_.avail_in -= bytes_already_copied;
+            lzma_block_decoder_.next_in += bytes_already_copied;
+            assert(lzma_block_decoder_.avail_in == 0);
             replenish_compressed_buffer();
           }
 
           // TODO: make sure avail_in is greater than (lzma_block_.header_size - 1) - bytes_already_copied.
           std::size_t bytes_left_to_copy = (lzma_block_.header_size - 1) - bytes_already_copied;
-          std::memcpy(&block_header[1 + bytes_already_copied], lzma_strm_.next_in, bytes_left_to_copy);
-          lzma_strm_.avail_in -= bytes_left_to_copy;
-          lzma_strm_.next_in += bytes_left_to_copy;
+          std::memcpy(&block_header[1 + bytes_already_copied], lzma_block_decoder_.next_in, bytes_left_to_copy);
+          lzma_block_decoder_.avail_in -= bytes_left_to_copy;
+          lzma_block_decoder_.next_in += bytes_left_to_copy;
 
           lzma_res_ = lzma_block_header_decode(&lzma_block_, nullptr, block_header.data());
           if (lzma_res_ != LZMA_OK )
@@ -137,23 +101,23 @@ private:
           }
           else
           {
-            lzma_res_ = lzma_block_decoder(&lzma_strm_, &lzma_block_);
+            lzma_res_ = lzma_block_decoder(&lzma_block_decoder_, &lzma_block_);
             // TODO: handle error.
           }
         }
         at_block_boundary_ = false;
       }
 
-      while (lzma_res_ == LZMA_OK && lzma_strm_.avail_out > 0 && lzma_block_.uncompressed_size > lzma_strm_.total_out)
+      if (lzma_res_ == LZMA_OK)
       {
-        if (lzma_strm_.avail_in == 0 && !feof(fp_))
+        if (lzma_block_decoder_.avail_in == 0 && !feof(fp_))
         {
           replenish_compressed_buffer();
         }
 
-        assert(lzma_strm_.avail_in > 0);
+        assert(lzma_block_decoder_.avail_in > 0);
 
-        lzma_ret r = lzma_code(&lzma_strm_, LZMA_RUN);
+        lzma_ret r = lzma_code(&lzma_block_decoder_, LZMA_RUN);
         if (r == LZMA_STREAM_END)
         {
           // End of block.
@@ -164,8 +128,7 @@ private:
       }
 
       char* start = ((char*)decompressed_buffer_.data());
-      setg(start, start, start + (decompressed_buffer_.size() - lzma_strm_.avail_out));
-
+      setg(start, start, start + (decompressed_buffer_.size() - lzma_block_decoder_.avail_out));
       decoded_position_ += (egptr() - gptr());
 
       if (discard_amount_ > 0)
@@ -178,9 +141,6 @@ private:
       }
     }
 
-//    if (lzma_res_ == LZMA_DATA_ERROR)
-//      lzma_res_ = LZMA_STREAM_END;
-
     if (lzma_res_ == LZMA_STREAM_END && gptr() >= egptr())
       return traits_type::eof();
     else if (lzma_res_ != LZMA_OK && lzma_res_ != LZMA_STREAM_END)
@@ -191,9 +151,8 @@ private:
 
   void replenish_compressed_buffer()
   {
-    lzma_strm_.next_in = compressed_buffer_.data();
-    lzma_strm_.avail_in = fread(compressed_buffer_.data(), 1, compressed_buffer_.size(), fp_);
-    bytes_read_of_current_block_ += lzma_strm_.avail_in;
+    lzma_block_decoder_.next_in = compressed_buffer_.data();
+    lzma_block_decoder_.avail_in = fread(compressed_buffer_.data(), 1, compressed_buffer_.size(), fp_);
   }
 
   std::streambuf::pos_type seekoff(std::streambuf::off_type off, std::ios_base::seekdir way, std::ios_base::openmode which)
@@ -247,8 +206,13 @@ private:
       return pos_type(off_type(-1));
 
     discard_amount_ = off_type(pos) - lzma_index_itr_.block.uncompressed_file_offset;
+    decoded_position_ = lzma_index_itr_.block.uncompressed_file_offset;
 
-    reset_lzma_decoder();
+    at_block_boundary_ = true;
+    lzma_block_decoder_.next_in = nullptr;
+    lzma_block_decoder_.avail_in = 0;
+    char* end = ((char*)decompressed_buffer_.data()) + decompressed_buffer_.size();
+    setg(end, end, end);
 
     return pos;
   }
@@ -260,10 +224,6 @@ private:
 
     if (lzma_stream_footer_decode(&stream_footer_flags_, stream_footer_.data()) != LZMA_OK)
       return false;
-
-    /*lzma_index_ = lzma_index_init(NULL);
-    if (!lzma_index_)
-      return pos_type(off_type(-1));*/
 
     std::vector<std::uint8_t> index_raw(stream_footer_flags_.backward_size);
     if (fseek(fp_, -(stream_footer_flags_.backward_size + 12), SEEK_END) || !fread(index_raw.data(), index_raw.size(), 1, fp_))
@@ -282,7 +242,7 @@ private:
 private:
   lzma_stream_flags stream_header_flags_;
   lzma_stream_flags stream_footer_flags_;
-  lzma_stream lzma_strm_;
+  lzma_stream lzma_block_decoder_;
   lzma_block lzma_block_;
   lzma_filter lzma_block_filters_buf_[LZMA_FILTERS_MAX + 1];
   lzma_index_iter lzma_index_itr_;
@@ -290,7 +250,6 @@ private:
   std::array<std::uint8_t, LZMA_STREAM_HEADER_SIZE> stream_footer_;
   std::array<std::uint8_t, (BUFSIZ >= LZMA_BLOCK_HEADER_SIZE_MAX ? BUFSIZ : LZMA_BLOCK_HEADER_SIZE_MAX)> compressed_buffer_;
   std::array<std::uint8_t, (BUFSIZ >= LZMA_BLOCK_HEADER_SIZE_MAX ? BUFSIZ : LZMA_BLOCK_HEADER_SIZE_MAX)> decompressed_buffer_;
-  std::size_t bytes_read_of_current_block_;
   std::uint64_t decoded_position_;
   std::uint64_t discard_amount_;
   FILE* fp_;
