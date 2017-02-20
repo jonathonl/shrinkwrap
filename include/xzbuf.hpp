@@ -12,16 +12,16 @@
 class ixzbuf : public std::streambuf
 {
 public:
-  ixzbuf(FILE* fp) :
+  ixzbuf(const std::string& file_path) :
     decoded_position_(0),
     discard_amount_(0),
-    fp_(fp),
+    fp_(fopen(file_path.c_str(), "rb")),
     put_back_size_(0),
     lzma_index_(nullptr),
     at_block_boundary_(true)
   {
     lzma_block_decoder_ = LZMA_STREAM_INIT;
-    fread(stream_header_.data(), stream_header_.size(), 1, fp); // TODO: handle error.
+    fread(stream_header_.data(), stream_header_.size(), 1, fp_); // TODO: handle error.
     lzma_res_ = lzma_stream_header_decode(&stream_header_flags_, stream_header_.data());
     if (lzma_res_ != LZMA_OK)
     {
@@ -31,16 +31,12 @@ public:
     setg(end, end, end);
   }
 
-  ixzbuf(const std::string& file_path)
-    : ixzbuf(fopen(file_path.c_str(), "rb"))
-  {
-  }
-
   ~ixzbuf()
   {
     lzma_end(&lzma_block_decoder_);
     if (lzma_index_)
       lzma_index_end(lzma_index_, nullptr);
+    fclose(fp_);
   }
 private:
   std::streambuf::int_type underflow()
@@ -262,8 +258,8 @@ private:
 class oxzbuf : public std::streambuf
 {
 public:
-  oxzbuf(FILE* fp) :
-    fp_(fp)
+  oxzbuf(const std::string& file_path) :
+    fp_(fopen(file_path.c_str(), "wb"))
   {
     lzma_stream_encoder_ = LZMA_STREAM_INIT;
 
@@ -280,15 +276,26 @@ public:
     setp((char*)decompressed_buffer_.data(), end);
   }
 
-  oxzbuf(const std::string& file_path)
-    : oxzbuf(fopen(file_path.c_str(), "wb"))
-  {
-  }
-
   ~oxzbuf()
   {
-    sync();
+    lzma_stream_encoder_.next_in = decompressed_buffer_.data();
+    lzma_stream_encoder_.avail_in = decompressed_buffer_.size() - (epptr() - pptr());
+    while (lzma_res_ == LZMA_OK)
+    {
+      lzma_res_ = lzma_code(&lzma_stream_encoder_, LZMA_FINISH);
+      if (lzma_stream_encoder_.avail_out == 0 || lzma_res_ == LZMA_STREAM_END)
+      {
+        if (!fwrite(compressed_buffer_.data(), compressed_buffer_.size() - lzma_stream_encoder_.avail_out, 1, fp_))
+        {
+          break;
+        }
+        lzma_stream_encoder_.next_out = compressed_buffer_.data();
+        lzma_stream_encoder_.avail_out = compressed_buffer_.size();
+      }
+    }
+
     lzma_end(&lzma_stream_encoder_);
+    fclose(fp_);
   }
 private:
   int overflow(int c = EOF)
@@ -302,12 +309,12 @@ private:
     {
       lzma_stream_encoder_.next_in = decompressed_buffer_.data();
       lzma_stream_encoder_.avail_in = decompressed_buffer_.size();
-      while (lzma_res_ == LZMA_OK)
+      while (lzma_res_ == LZMA_OK && lzma_stream_encoder_.avail_in > 0)
       {
-        lzma_res_ = lzma_code(&lzma_stream_encoder_, LZMA_FULL_FLUSH);
-        if (lzma_stream_encoder_.avail_out == 0)
+        lzma_res_ = lzma_code(&lzma_stream_encoder_, LZMA_RUN);
+        if (lzma_stream_encoder_.avail_out == 0 || lzma_res_ == LZMA_STREAM_END)
         {
-          if (!fwrite(compressed_buffer_.data(), compressed_buffer_.size(), 1, fp_))
+          if (!fwrite(compressed_buffer_.data(), compressed_buffer_.size() - lzma_stream_encoder_.avail_out, 1, fp_))
           {
             // TODO: handle error.
             return traits_type::eof();
@@ -336,9 +343,9 @@ private:
       while (lzma_res_ == LZMA_OK)
       {
         lzma_res_ = lzma_code(&lzma_stream_encoder_, LZMA_FULL_FLUSH);
-        if (lzma_stream_encoder_.avail_out == 0)
+        if (lzma_stream_encoder_.avail_out == 0 || lzma_res_ == LZMA_STREAM_END)
         {
-          if (!fwrite(compressed_buffer_.data(), compressed_buffer_.size(), 1, fp_))
+          if (!fwrite(compressed_buffer_.data(), compressed_buffer_.size() - lzma_stream_encoder_.avail_out, 1, fp_))
           {
             // TODO: handle error.
             return -1;
@@ -351,14 +358,6 @@ private:
       if (lzma_res_ == LZMA_STREAM_END)
         lzma_res_ = LZMA_OK;
 
-      if (!fwrite(compressed_buffer_.data(), compressed_buffer_.size(), 1, fp_))
-      {
-        // TODO: handle error.
-        return traits_type::eof();
-      }
-      lzma_stream_encoder_.next_out = compressed_buffer_.data();
-      lzma_stream_encoder_.avail_out = compressed_buffer_.size();
-
       if (lzma_res_ != LZMA_OK)
         return -1;
 
@@ -369,7 +368,7 @@ private:
     return 0;
   }
 private:
-  static const std::size_t default_block_size = 4 * 1024 * 1024;
+  static const std::size_t default_block_size = 1024; //4 * 1024 * 1024;
   std::array<std::uint8_t, (default_block_size >= LZMA_BLOCK_HEADER_SIZE_MAX ? default_block_size : LZMA_BLOCK_HEADER_SIZE_MAX)> compressed_buffer_;
   std::array<std::uint8_t, (default_block_size >= LZMA_BLOCK_HEADER_SIZE_MAX ? default_block_size : LZMA_BLOCK_HEADER_SIZE_MAX)> decompressed_buffer_;
   lzma_stream lzma_stream_encoder_;
@@ -387,6 +386,18 @@ public:
   }
 private:
   ixzbuf sbuf_;
+};
+
+class oxzstream : public std::ostream
+{
+public:
+  oxzstream(const std::string& file_path) :
+    std::ostream(&sbuf_),
+    sbuf_(file_path)
+  {
+  }
+private:
+  oxzbuf sbuf_;
 };
 
 #endif //XZBUF_XZBUF_HPP
