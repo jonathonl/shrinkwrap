@@ -31,5 +31,17 @@ while (is)
 }
 ```
 
+## oxzstream 
+```c++
+std::array<char, 1024 * 1024> buf;
+oxzstream os("file.xz");
+while (std::cin)
+{
+  std::cin.read(buf.data(), buf.size());
+  os.write(buf.data(), buf.gcount());
+  os.flush(); // flush() creates block boundary.
+}
+```
+
 ## Caveats
 * Does not support files with concatenated streams.

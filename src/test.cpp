@@ -6,14 +6,23 @@
 
 int main(int argc, char* argv[])
 {
-  std::string data = "Some text to compress.";
-  oxzbuf obuf("test.xz");
-  std::ostream os(&obuf);
-  os.write(data.data(), data.size());
-  os.flush();
+
+  {
+    std::ifstream ifs("README.md");
+    oxzbuf obuf("test.xz");
+    std::ostream os(&obuf);
+    std::array<char, 512> buf;
+    while (ifs)
+    {
+      ifs.read(buf.data(), buf.size());
+      os.write(buf.data(), ifs.gcount());
+      os.flush();
+    }
+  }
 
 
-  ixzbuf sbuf("xzbuf.hpp.xz");
+
+  ixzbuf sbuf("test.xz");
   std::istream is(&sbuf);
 
   std::array<char, 64> tmp;
