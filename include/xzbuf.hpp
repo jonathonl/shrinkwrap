@@ -259,6 +259,123 @@ private:
   bool at_block_boundary_;
 };
 
+class oxzbuf : public std::streambuf
+{
+public:
+  oxzbuf(FILE* fp) :
+    fp_(fp)
+  {
+    lzma_stream_encoder_ = LZMA_STREAM_INIT;
+
+    lzma_res_ = lzma_easy_encoder(&lzma_stream_encoder_, LZMA_PRESET_DEFAULT, LZMA_CHECK_CRC64);
+    if (lzma_res_ != LZMA_OK)
+    {
+      // TODO: handle error.
+    }
+
+    lzma_stream_encoder_.next_out = compressed_buffer_.data();
+    lzma_stream_encoder_.avail_out = compressed_buffer_.size();
+
+    char* end = ((char*)decompressed_buffer_.data()) + decompressed_buffer_.size();
+    setp((char*)decompressed_buffer_.data(), end);
+  }
+
+  oxzbuf(const std::string& file_path)
+    : oxzbuf(fopen(file_path.c_str(), "wb"))
+  {
+  }
+
+  ~oxzbuf()
+  {
+    sync();
+    lzma_end(&lzma_stream_encoder_);
+  }
+private:
+  int overflow(int c = EOF)
+  {
+    if ((epptr() - pptr()) > 0)
+    {
+      assert(!"Put buffer not empty, this should never happen");
+      this->sputc(static_cast<char>(0xFF & c));
+    }
+    else
+    {
+      lzma_stream_encoder_.next_in = decompressed_buffer_.data();
+      lzma_stream_encoder_.avail_in = decompressed_buffer_.size();
+      while (lzma_res_ == LZMA_OK)
+      {
+        lzma_res_ = lzma_code(&lzma_stream_encoder_, LZMA_FULL_FLUSH);
+        if (lzma_stream_encoder_.avail_out == 0)
+        {
+          if (!fwrite(compressed_buffer_.data(), compressed_buffer_.size(), 1, fp_))
+          {
+            // TODO: handle error.
+            return traits_type::eof();
+          }
+          lzma_stream_encoder_.next_out = compressed_buffer_.data();
+          lzma_stream_encoder_.avail_out = compressed_buffer_.size();
+        }
+      }
+
+      if (lzma_res_ == LZMA_STREAM_END)
+        lzma_res_ = LZMA_OK;
+
+      assert(lzma_stream_encoder_.avail_in == 0);
+      setp((char*)decompressed_buffer_.data(), (char*)decompressed_buffer_.data() + decompressed_buffer_.size());
+    }
+
+    return (lzma_res_ == LZMA_OK ? traits_type::to_int_type(c) : traits_type::eof());
+  }
+
+  int sync()
+  {
+    lzma_stream_encoder_.next_in = decompressed_buffer_.data();
+    lzma_stream_encoder_.avail_in = decompressed_buffer_.size() - (epptr() - pptr());
+    if (lzma_stream_encoder_.avail_in)
+    {
+      while (lzma_res_ == LZMA_OK)
+      {
+        lzma_res_ = lzma_code(&lzma_stream_encoder_, LZMA_FULL_FLUSH);
+        if (lzma_stream_encoder_.avail_out == 0)
+        {
+          if (!fwrite(compressed_buffer_.data(), compressed_buffer_.size(), 1, fp_))
+          {
+            // TODO: handle error.
+            return -1;
+          }
+          lzma_stream_encoder_.next_out = compressed_buffer_.data();
+          lzma_stream_encoder_.avail_out = compressed_buffer_.size();
+        }
+      }
+
+      if (lzma_res_ == LZMA_STREAM_END)
+        lzma_res_ = LZMA_OK;
+
+      if (!fwrite(compressed_buffer_.data(), compressed_buffer_.size(), 1, fp_))
+      {
+        // TODO: handle error.
+        return traits_type::eof();
+      }
+      lzma_stream_encoder_.next_out = compressed_buffer_.data();
+      lzma_stream_encoder_.avail_out = compressed_buffer_.size();
+
+      if (lzma_res_ != LZMA_OK)
+        return -1;
+
+      assert(lzma_stream_encoder_.avail_in == 0);
+      setp((char*)decompressed_buffer_.data(), (char*)decompressed_buffer_.data() + decompressed_buffer_.size());
+    }
+
+    return 0;
+  }
+private:
+  static const std::size_t default_block_size = 4 * 1024 * 1024;
+  std::array<std::uint8_t, (default_block_size >= LZMA_BLOCK_HEADER_SIZE_MAX ? default_block_size : LZMA_BLOCK_HEADER_SIZE_MAX)> compressed_buffer_;
+  std::array<std::uint8_t, (default_block_size >= LZMA_BLOCK_HEADER_SIZE_MAX ? default_block_size : LZMA_BLOCK_HEADER_SIZE_MAX)> decompressed_buffer_;
+  lzma_stream lzma_stream_encoder_;
+  FILE* fp_;
+  lzma_ret lzma_res_;
+};
 
 class ixzstream : public std::istream
 {

@@ -1,10 +1,17 @@
 
 #include "xzbuf.hpp"
+#include <fstream>
 
 #include <iostream>
 
 int main(int argc, char* argv[])
 {
+  std::string data = "Some text to compress.";
+  oxzbuf obuf("test.xz");
+  std::ostream os(&obuf);
+  os.write(data.data(), data.size());
+  os.flush();
+
 
   ixzbuf sbuf("xzbuf.hpp.xz");
   std::istream is(&sbuf);
