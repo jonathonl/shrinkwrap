@@ -1,12 +1,17 @@
 language: cpp
 compiler: gcc
+dist: trusty
+sudo: required
 branches:
   only:
     - develop
-install:
-  - sudo add-apt-repository ppa:george-edison55/precise-backports --yes
-  - sudo apt-get update
-  - sudo apt-get install cmake
+addons:
+  apt:
+    sources:
+      - ppa:george-edison55/cmake-3.x
+    packages:
+      - cmake
+      - cmake-data
 script:
   - mkdir build && cd build && cmake .. && make
   - ./xzbuf-test
