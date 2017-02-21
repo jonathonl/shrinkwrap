@@ -1,0 +1,8 @@
+language: cpp
+compiler: gcc
+branches:
+  only:
+    - develop
+script:
+  - mkdir build && cd build && cmake .. && make
+  - ./xzbuf-test
