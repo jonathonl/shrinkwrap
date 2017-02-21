@@ -13,7 +13,8 @@ addons:
       - cmake
       - cmake-data
 install:
-  - sudo apt-get upgrade --yes
+  - sudo apt-get install --yes --only-upgrade cmake-data
+  - sudo apt-get install --yes --only-upgrade cmake
 script:
   - mkdir build && cd build && cmake .. && make
   - ./xzbuf-test
