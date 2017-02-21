@@ -56,6 +56,7 @@ bool run_seek_test(const std::string& file_path)
 
 int main(int argc, char* argv[])
 {
+  int ret = -1;
   std::size_t error_count = 0;
 
   {
@@ -76,9 +77,14 @@ int main(int argc, char* argv[])
   }
 
   if (error_count)
+  {
     std::cerr << error_count << " errors!" << std::endl;
+  }
   else
+  {
+    ret = 0;
     std::cout << "Success." << std::endl;
+  }
 
-  return 0;
+  return ret;
 }
