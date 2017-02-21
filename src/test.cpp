@@ -7,7 +7,6 @@
 #include <sys/stat.h>
 #include <random>
 #include <chrono>
-#include <cstring>
 
 bool file_exists(const std::string& file_path) {
   struct stat st;

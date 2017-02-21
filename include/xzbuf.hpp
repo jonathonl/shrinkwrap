@@ -9,6 +9,7 @@
 #include <assert.h>
 #include <iostream>
 #include <limits>
+#include <cstring>
 
 class ixzbuf : public std::streambuf
 {
