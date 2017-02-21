@@ -12,6 +12,8 @@ addons:
     packages:
       - cmake
       - cmake-data
+install:
+  - sudo apt-get upgrade --yes
 script:
   - mkdir build && cd build && cmake .. && make
   - ./xzbuf-test
