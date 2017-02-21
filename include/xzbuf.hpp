@@ -8,6 +8,7 @@
 #include <lzma.h>
 #include <assert.h>
 #include <iostream>
+#include <limits>
 
 class ixzbuf : public std::streambuf
 {
