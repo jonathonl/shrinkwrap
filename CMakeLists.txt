@@ -8,7 +8,7 @@ if(EXISTS ${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
     conan_basic_setup()
 endif()
 
-find_package(LIBLZMA REQUIRED)
+find_package(LibLZMA REQUIRED)
 message("xz include dir: ${LIBLZMA_INCLUDE_DIRS}")
 message("xz libs: ${LIBLZMA_LIBRARIES}")
 
