@@ -16,8 +16,8 @@ addons:
 #  - sudo apt-get install --yes --only-upgrade cmake-data
 #  - sudo apt-get install --yes --only-upgrade cmake
 script:
+  - cmake --version
   - mkdir build && cd build
-  - cmake ..
+  - cmake .. || echo ""
   - make
-  - export CTEST_OUTPUT_ON_FAILURE=1
-  - make test
+  - make CTEST_OUTPUT_ON_FAILURE=1 test
