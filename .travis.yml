@@ -5,13 +5,13 @@ sudo: required
 branches:
   only:
     - develop
-#addons:
-#  apt:
-#    sources:
-#      - george-edison55-precise-backports
-#    packages:
-#      - cmake
-#      - cmake-data
+addons:
+  apt:
+    sources:
+      - george-edison55-precise-backports
+    packages:
+      - cmake-data
+      - cmake
 #install:
 #  - sudo apt-get install --yes --only-upgrade cmake-data
 #  - sudo apt-get install --yes --only-upgrade cmake
