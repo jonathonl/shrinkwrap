@@ -7,14 +7,16 @@ enable_testing()
 
 set(CMAKE_CXX_STANDARD 11)
 
-#ExternalProject_Add(xz_project
-#                    BUILD_IN_SOURCE 1
-#                    GIT_REPOSITORY "http://git.tukaani.org/xz.git"
-#                    GIT_TAG "v5.2.3"
-#                    UPDATE_COMMAND ""
-#                    CONFIGURE_COMMAND autoreconf -fi && ./configure --prefix=${CMAKE_CURRENT_BINARY_DIR} #<INSTALL_DIR>
-#                    BUILD_COMMAND make debug
-#                    INSTALL_COMMAND make install)
+if (${INSTALL_DEPENDENCIES})
+    message("Installing dependencies ... ")
+    file(MAKE_DIRECTORY dep/build)
+    execute_process(COMMAND ${CMAKE_COMMAND} -DCMAKE_INSTALL_PREFIX=./ .. WORKING_DIRECTORY "dep/build")
+    execute_process(COMMAND make WORKING_DIRECTORY "dep/build" RESULT_VARIABLE build_result)
+    if(result)
+        message(FATAL_ERROR "Dependency installation failed.")
+    endif()
+    message("Done nstalling dependencies ... ")
+endif()
 
 
 find_package(LibLZMA REQUIRED)
