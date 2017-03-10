@@ -23,7 +23,7 @@ add_library(xzbuf INTERFACE)
 target_sources(xzbuf INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/xzbuf.hpp>)
 target_include_directories(xzbuf INTERFACE
                            $<INSTALL_INTERFACE:include>
-                           $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+                           $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
                            ${LIBLZMA_INCLUDE_DIRS})
 target_link_libraries(xzbuf INTERFACE ${LIBLZMA_LIBRARIES})
 
