@@ -16,5 +16,8 @@ branches:
 #  - sudo apt-get install --yes --only-upgrade cmake-data
 #  - sudo apt-get install --yes --only-upgrade cmake
 script:
-  - mkdir build && cd build && cmake .. && make
-  - ./xzbuf-test
+  - mkdir build && cd build
+  - cmake ..
+  - make
+  - export CTEST_OUTPUT_ON_FAILURE=1
+  - make test
