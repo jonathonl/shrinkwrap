@@ -19,7 +19,7 @@ if (${INSTALL_DEPENDENCIES})
 
     set(LIBLZMA_INCLUDE_DIRS "")
     find_library(LIBLZMA_LIBRARIES
-                 NAMES lzma
+                 NAMES liblzma.a
                  PATHS ${CMAKE_SOURCE_DIR}/dep/xz_project-prefix/src/xz_project/src/liblzma/.libs
                  NO_DEFAULT_PATH)
 else()
