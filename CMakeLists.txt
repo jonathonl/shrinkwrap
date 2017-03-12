@@ -7,7 +7,7 @@ enable_testing()
 
 set(CMAKE_CXX_STANDARD 11)
 
-if (${INSTALL_DEPENDENCIES})
+if (1) #${INSTALL_DEPENDENCIES})
     message("Installing dependencies ... ")
     #file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/dep/build)
     execute_process(COMMAND ${CMAKE_COMMAND} -DCMAKE_INSTALL_PREFIX=./ ${CMAKE_SOURCE_DIR}/dep WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/dep)
@@ -17,14 +17,25 @@ if (${INSTALL_DEPENDENCIES})
     endif()
     message("Done installing dependencies ... ")
 
-    set(LIBLZMA_INCLUDE_DIRS "")
+    set(LIBLZMA_INCLUDE_DIRS $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/dep/xz_project-prefix/src/xz_project/src/liblzma>)
+    if (${BUILD_SHARED_LIBS})
+        set(LIBLZMA_LIB_NAME ${CMAKE_SHARED_LIBRARY_PREFIX}lzma${CMAKE_SHARED_LIBRARY_SUFFIX})
+    else()
+        set(LIBLZMA_LIB_NAME ${CMAKE_STATIC_LIBRARY_PREFIX}lzma${CMAKE_STATIC_LIBRARY_SUFFIX})
+    endif()
+
     find_library(LIBLZMA_LIBRARIES
-                 NAMES liblzma.a
+                 NAMES ${LIBLZMA_LIB_NAME}
                  PATHS ${CMAKE_SOURCE_DIR}/dep/xz_project-prefix/src/xz_project/src/liblzma/.libs
-                 NO_DEFAULT_PATH)
+                 NO_DEFAULT_PATH
+                 REQUIRED)
 else()
     find_package(LibLZMA REQUIRED)
 endif()
+get_cmake_property(_variableNames VARIABLES)
+foreach (_variableName ${_variableNames})
+    message(STATUS "${_variableName}=${${_variableName}}")
+endforeach()
 
 
 add_library(xzbuf INTERFACE)
@@ -32,7 +43,7 @@ target_sources(xzbuf INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/inc
 target_include_directories(xzbuf INTERFACE
                            $<INSTALL_INTERFACE:include>
                            $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
-                           $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/dep/xz_project-prefix/src/xz_project/src/liblzma>
+
                            ${LIBLZMA_INCLUDE_DIRS})
 target_link_libraries(xzbuf INTERFACE ${LIBLZMA_LIBRARIES})
 
