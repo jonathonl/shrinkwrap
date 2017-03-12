@@ -9,23 +9,30 @@ set(CMAKE_CXX_STANDARD 11)
 
 if (${INSTALL_DEPENDENCIES})
     message("Installing dependencies ... ")
-    file(MAKE_DIRECTORY dep/build)
-    execute_process(COMMAND ${CMAKE_COMMAND} -DCMAKE_INSTALL_PREFIX=./ .. WORKING_DIRECTORY "dep/build")
-    execute_process(COMMAND make WORKING_DIRECTORY "dep/build" RESULT_VARIABLE build_result)
-    if(result)
+    #file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/dep/build)
+    execute_process(COMMAND ${CMAKE_COMMAND} -DCMAKE_INSTALL_PREFIX=./ ${CMAKE_SOURCE_DIR}/dep WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/dep)
+    execute_process(COMMAND make WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/dep RESULT_VARIABLE build_result)
+    if(build_result)
         message(FATAL_ERROR "Dependency installation failed.")
     endif()
-    message("Done nstalling dependencies ... ")
+    message("Done installing dependencies ... ")
+
+    set(LIBLZMA_INCLUDE_DIRS "")
+    find_library(LIBLZMA_LIBRARIES
+                 NAMES lzma
+                 PATHS ${CMAKE_SOURCE_DIR}/dep/xz_project-prefix/src/xz_project/src/liblzma/.libs
+                 NO_DEFAULT_PATH)
+else()
+    find_package(LibLZMA REQUIRED)
 endif()
 
-
-find_package(LibLZMA REQUIRED)
 
 add_library(xzbuf INTERFACE)
 target_sources(xzbuf INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/xzbuf.hpp>)
 target_include_directories(xzbuf INTERFACE
                            $<INSTALL_INTERFACE:include>
-                           $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+                           $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+                           $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/dep/xz_project-prefix/src/xz_project/src/liblzma>
                            ${LIBLZMA_INCLUDE_DIRS})
 target_link_libraries(xzbuf INTERFACE ${LIBLZMA_LIBRARIES})
 
@@ -44,3 +51,5 @@ install(TARGETS xzbuf EXPORT xzbuf-config
 install(EXPORT ${PROJECT_NAME}-config DESTINATION share/${PROJECT_NAME})
 write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config-version.cmake COMPATIBILITY SameMajorVersion)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config-version.cmake DESTINATION share/${PROJECT_NAME})
+
+export(EXPORT ${PROJECT_NAME}-config)

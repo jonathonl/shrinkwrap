@@ -10,4 +10,4 @@ ExternalProject_Add(xz_project
                     UPDATE_COMMAND ""
                     CONFIGURE_COMMAND autoreconf -fi && ./configure --prefix=${CMAKE_INSTALL_PREFIX} #<INSTALL_DIR>
                     BUILD_COMMAND make
-                    INSTALL_COMMAND make install)
+                    INSTALL_COMMAND "")
