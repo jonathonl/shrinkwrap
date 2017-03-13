@@ -9,15 +9,15 @@ set(CMAKE_CXX_STANDARD 11)
 
 if (1) #${INSTALL_DEPENDENCIES})
     message("Installing dependencies ... ")
-    #file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/dep/build)
-    execute_process(COMMAND ${CMAKE_COMMAND} -DCMAKE_INSTALL_PREFIX=./ ${CMAKE_SOURCE_DIR}/dep WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/dep)
-    execute_process(COMMAND make WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/dep RESULT_VARIABLE build_result)
+    #file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/dep/build)
+    execute_process(COMMAND ${CMAKE_COMMAND} -DCMAKE_INSTALL_PREFIX=./ ${CMAKE_CURRENT_SOURCE_DIR}/dep WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/dep)
+    execute_process(COMMAND make WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/dep RESULT_VARIABLE build_result)
     if(build_result)
         message(FATAL_ERROR "Dependency installation failed.")
     endif()
     message("Done installing dependencies ... ")
 
-    set(LIBLZMA_INCLUDE_DIRS $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/dep/xz_project-prefix/src/xz_project/src/liblzma>)
+    set(LIBLZMA_INCLUDE_DIRS $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/dep/xz_project-prefix/src/xz_project/src/liblzma>)
     if (${BUILD_SHARED_LIBS})
         set(LIBLZMA_LIB_NAME ${CMAKE_SHARED_LIBRARY_PREFIX}lzma${CMAKE_SHARED_LIBRARY_SUFFIX})
     else()
@@ -26,23 +26,20 @@ if (1) #${INSTALL_DEPENDENCIES})
 
     find_library(LIBLZMA_LIBRARIES
                  NAMES ${LIBLZMA_LIB_NAME}
-                 PATHS ${CMAKE_SOURCE_DIR}/dep/xz_project-prefix/src/xz_project/src/liblzma/.libs
+                 PATHS ${CMAKE_CURRENT_SOURCE_DIR}/dep/xz_project-prefix/src/xz_project/src/liblzma/.libs
                  NO_DEFAULT_PATH
                  REQUIRED)
 else()
     find_package(LibLZMA REQUIRED)
 endif()
-get_cmake_property(_variableNames VARIABLES)
-foreach (_variableName ${_variableNames})
-    message(STATUS "${_variableName}=${${_variableName}}")
-endforeach()
+
 
 
 add_library(xzbuf INTERFACE)
 target_sources(xzbuf INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/xzbuf.hpp>)
 target_include_directories(xzbuf INTERFACE
                            $<INSTALL_INTERFACE:include>
-                           $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+                           $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 
                            ${LIBLZMA_INCLUDE_DIRS})
 target_link_libraries(xzbuf INTERFACE ${LIBLZMA_LIBRARIES})
