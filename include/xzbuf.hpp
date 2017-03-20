@@ -81,6 +81,9 @@ public:
       fclose(fp_);
   }
 private:
+  //ixzbuf(const ixzbuf& src) = delete;
+  //ixzbuf& operator=(const ixzbuf& src) = delete;
+
   std::streambuf::int_type underflow()
   {
     if (gptr() < egptr()) // buffer not exhausted
@@ -425,6 +428,22 @@ public:
     std::istream(&sbuf_),
     sbuf_(file_path)
   {
+  }
+
+  ixzstream(ixzstream&& src) :
+    std::istream(&sbuf_),
+    sbuf_(std::move(src.sbuf_))
+  {
+  }
+
+  ixzstream& operator=(ixzstream&& src)
+  {
+    if (&src != this)
+    {
+      std::istream::operator=(std::move(src));
+      sbuf_ = std::move(src.sbuf_);
+    }
+    return *this;
   }
 private:
   ixzbuf sbuf_;
