@@ -33,12 +33,52 @@ public:
     setg(end, end, end);
   }
 
+  ixzbuf(ixzbuf&& src)
+  {
+    operator=(std::move(src));
+  }
+
+  ixzbuf& operator=(ixzbuf&& src)
+  {
+    if (&src != this)
+    {
+      stream_header_flags_ = src.stream_header_flags_;
+      stream_footer_flags_ = src.stream_footer_flags_;
+      lzma_block_decoder_ = src.lzma_block_decoder_;
+      if (src.lzma_block_decoder_.internal)
+        src.lzma_block_decoder_.internal = nullptr;
+      lzma_block_ = src.lzma_block_;
+      lzma_block_filters_buf_ = src.lzma_block_filters_buf_; // TODO: handle filter.options
+      lzma_index_itr_ = src.lzma_index_itr_; // lzma_index_iter_init() doesn't allocate any memory, thus there is no lzma_index_iter_end().
+      stream_header_ = src.stream_header_;
+      stream_footer_ = src.stream_footer_;
+      compressed_buffer_ = src.compressed_buffer_;
+      decompressed_buffer_ = src.decompressed_buffer_;
+      decoded_position_ = src.decoded_position_;
+      discard_amount_ = src.discard_amount_;
+      fp_ = src.fp_;
+      if (src.fp_)
+        src.fp_ = nullptr;
+      put_back_size_ = src.put_back_size_;
+      lzma_index_ = src.lzma_index_;
+      if (src.lzma_index_)
+        src.lzma_index_ = nullptr;
+      lzma_res_ = src.lzma_res_;
+      at_block_boundary_ = src.at_block_boundary_;
+    }
+
+    return *this;
+  }
+
+
   ~ixzbuf()
   {
-    lzma_end(&lzma_block_decoder_);
+    if (lzma_block_decoder_.internal)
+      lzma_end(&lzma_block_decoder_);
     if (lzma_index_)
       lzma_index_end(lzma_index_, nullptr);
-    fclose(fp_);
+    if (fp_)
+      fclose(fp_);
   }
 private:
   std::streambuf::int_type underflow()
@@ -72,7 +112,7 @@ private:
         {
           lzma_block_.version = 0;
           lzma_block_.check = stream_header_flags_.check;
-          lzma_block_.filters = lzma_block_filters_buf_;
+          lzma_block_.filters = lzma_block_filters_buf_.data();
           lzma_block_.header_size = lzma_block_header_size_decode (block_header[0]);
 
           std::size_t bytes_already_copied = 0;
@@ -242,7 +282,7 @@ private:
   lzma_stream_flags stream_footer_flags_;
   lzma_stream lzma_block_decoder_;
   lzma_block lzma_block_;
-  lzma_filter lzma_block_filters_buf_[LZMA_FILTERS_MAX + 1];
+  std::array<lzma_filter, LZMA_FILTERS_MAX + 1> lzma_block_filters_buf_;
   lzma_index_iter lzma_index_itr_;
   std::array<std::uint8_t, LZMA_STREAM_HEADER_SIZE> stream_header_;
   std::array<std::uint8_t, LZMA_STREAM_HEADER_SIZE> stream_footer_;
