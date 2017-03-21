@@ -9,15 +9,18 @@ addons:
   apt:
     sources:
       - george-edison55-precise-backports
+      - ubuntu-toolchain-r/test
     packages:
       - cmake-data
       - cmake
+      - gcc-5
+      - g++-5
 #install:
 #  - sudo apt-get install --yes --only-upgrade cmake-data
 #  - sudo apt-get install --yes --only-upgrade cmake
 script:
   - cmake --version
   - mkdir build && cd build
-  - cmake .. || echo ""
+  - cmake -DCMAKE_C_COMPILER=/usr/bin/gcc-5 -DCMAKE_CXX_COMPILER=/usr/bin/g++-5 .. || echo ""
   - make
   - make CTEST_OUTPUT_ON_FAILURE=1 test
