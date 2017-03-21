@@ -42,6 +42,7 @@ public:
   {
     if (&src != this)
     {
+      this->destroy();
       stream_header_flags_ = src.stream_header_flags_;
       stream_footer_flags_ = src.stream_footer_flags_;
       lzma_block_decoder_ = src.lzma_block_decoder_;
@@ -73,6 +74,14 @@ public:
 
   ~ixzbuf()
   {
+    this->destroy();
+  }
+private:
+  //ixzbuf(const ixzbuf& src) = delete;
+  //ixzbuf& operator=(const ixzbuf& src) = delete;
+
+  void destroy()
+  {
     if (lzma_block_decoder_.internal)
       lzma_end(&lzma_block_decoder_);
     if (lzma_index_)
@@ -80,9 +89,6 @@ public:
     if (fp_)
       fclose(fp_);
   }
-private:
-  //ixzbuf(const ixzbuf& src) = delete;
-  //ixzbuf& operator=(const ixzbuf& src) = delete;
 
   std::streambuf::int_type underflow()
   {
@@ -330,6 +336,7 @@ public:
   {
     if (&src != this)
     {
+      this->close();
       compressed_buffer_ = src.compressed_buffer_;
       decompressed_buffer_ = src.decompressed_buffer_;
       lzma_stream_encoder_ = src.lzma_stream_encoder_;
@@ -345,6 +352,11 @@ public:
   }
 
   ~oxzbuf()
+  {
+    this->close();
+  }
+private:
+  void close()
   {
     if (lzma_stream_encoder_.internal)
     {
@@ -369,7 +381,7 @@ public:
     if (fp_)
       fclose(fp_);
   }
-private:
+
   int overflow(int c = EOF)
   {
     if ((epptr() - pptr()) > 0)
