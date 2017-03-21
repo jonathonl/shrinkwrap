@@ -321,26 +321,53 @@ public:
     setp((char*)decompressed_buffer_.data(), end);
   }
 
-  ~oxzbuf()
+  oxzbuf(oxzbuf&& src)
   {
-    lzma_stream_encoder_.next_in = decompressed_buffer_.data();
-    lzma_stream_encoder_.avail_in = decompressed_buffer_.size() - (epptr() - pptr());
-    while (lzma_res_ == LZMA_OK)
+    operator=(std::move(src));
+  }
+
+  oxzbuf& operator=(oxzbuf&& src)
+  {
+    if (&src != this)
     {
-      lzma_res_ = lzma_code(&lzma_stream_encoder_, LZMA_FINISH);
-      if (lzma_stream_encoder_.avail_out == 0 || lzma_res_ == LZMA_STREAM_END)
-      {
-        if (!fwrite(compressed_buffer_.data(), compressed_buffer_.size() - lzma_stream_encoder_.avail_out, 1, fp_))
-        {
-          break;
-        }
-        lzma_stream_encoder_.next_out = compressed_buffer_.data();
-        lzma_stream_encoder_.avail_out = compressed_buffer_.size();
-      }
+      compressed_buffer_ = src.compressed_buffer_;
+      decompressed_buffer_ = src.decompressed_buffer_;
+      lzma_stream_encoder_ = src.lzma_stream_encoder_;
+      if (src.lzma_stream_encoder_.internal)
+        src.lzma_stream_encoder_.internal = nullptr;
+      fp_ = src.fp_;
+      if (src.fp_)
+        src.fp_ = nullptr;
+      lzma_res_ = src.lzma_res_;
     }
 
-    lzma_end(&lzma_stream_encoder_);
-    fclose(fp_);
+    return *this;
+  }
+
+  ~oxzbuf()
+  {
+    if (lzma_stream_encoder_.internal)
+    {
+      lzma_stream_encoder_.next_in = decompressed_buffer_.data();
+      lzma_stream_encoder_.avail_in = decompressed_buffer_.size() - (epptr() - pptr());
+      while (lzma_res_ == LZMA_OK)
+      {
+        lzma_res_ = lzma_code(&lzma_stream_encoder_, LZMA_FINISH);
+        if (lzma_stream_encoder_.avail_out == 0 || lzma_res_ == LZMA_STREAM_END)
+        {
+          if (!fwrite(compressed_buffer_.data(), compressed_buffer_.size() - lzma_stream_encoder_.avail_out, 1, fp_))
+          {
+            break;
+          }
+          lzma_stream_encoder_.next_out = compressed_buffer_.data();
+          lzma_stream_encoder_.avail_out = compressed_buffer_.size();
+        }
+      }
+      lzma_end(&lzma_stream_encoder_);
+    }
+
+    if (fp_)
+      fclose(fp_);
   }
 private:
   int overflow(int c = EOF)
@@ -456,6 +483,22 @@ public:
     std::ostream(&sbuf_),
     sbuf_(file_path)
   {
+  }
+
+  oxzstream(oxzstream&& src) :
+    std::ostream(&sbuf_),
+    sbuf_(std::move(src.sbuf_))
+  {
+  }
+
+  oxzstream& operator=(oxzstream&& src)
+  {
+    if (&src != this)
+    {
+      std::ostream::operator=(std::move(src));
+      sbuf_ = std::move(src.sbuf_);
+    }
+    return *this;
   }
 private:
   oxzbuf sbuf_;
