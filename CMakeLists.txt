@@ -46,10 +46,11 @@ target_link_libraries(xzbuf INTERFACE ${LIBLZMA_LIBRARIES})
 
 
 
-add_executable(xzbuf-seek-test src/test.cpp)
-target_link_libraries(xzbuf-seek-test xzbuf)
+add_executable(xzbuf-test src/test.cpp)
+target_link_libraries(xzbuf-test xzbuf)
 
-add_test(seek_test xzbuf-seek-test) #${CMAKE_BINARY_DIR}/xzbuf-seek-test)
+add_test(seek_test xzbuf-test seek)
+add_test(iterator_test xzbuf-test iterator)
 
 install(FILES $<TARGET_PROPERTY:xzbuf,INTERFACE_SOURCES> DESTINATION include)
 install(TARGETS xzbuf EXPORT xzbuf-config

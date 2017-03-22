@@ -412,7 +412,8 @@ private:
         lzma_res_ = LZMA_OK;
 
       assert(lzma_stream_encoder_.avail_in == 0);
-      setp((char*)decompressed_buffer_.data(), (char*)decompressed_buffer_.data() + decompressed_buffer_.size());
+      decompressed_buffer_[0] = reinterpret_cast<unsigned char&>(c);
+      setp((char*)decompressed_buffer_.data() + 1, (char*)decompressed_buffer_.data() + decompressed_buffer_.size());
     }
 
     return (lzma_res_ == LZMA_OK ? traits_type::to_int_type(c) : traits_type::eof());
