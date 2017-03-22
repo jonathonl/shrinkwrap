@@ -43,6 +43,9 @@ public:
     if (&src != this)
     {
       this->destroy();
+
+      std::streambuf::operator=(std::move(src))
+
       stream_header_flags_ = src.stream_header_flags_;
       stream_footer_flags_ = src.stream_footer_flags_;
       lzma_block_decoder_ = src.lzma_block_decoder_;
@@ -337,6 +340,9 @@ public:
     if (&src != this)
     {
       this->close();
+
+      std::streambuf::operator=(std::move(src));
+
       compressed_buffer_ = src.compressed_buffer_;
       decompressed_buffer_ = src.decompressed_buffer_;
       lzma_stream_encoder_ = src.lzma_stream_encoder_;
@@ -382,7 +388,7 @@ private:
       fclose(fp_);
   }
 
-  int overflow(int c = EOF)
+  int overflow(int c)
   {
     if ((epptr() - pptr()) > 0)
     {
