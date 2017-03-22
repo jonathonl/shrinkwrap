@@ -44,7 +44,7 @@ public:
     {
       this->destroy();
 
-      std::streambuf::operator=(std::move(src))
+      std::streambuf::operator=(std::move(src));
 
       stream_header_flags_ = src.stream_header_flags_;
       stream_footer_flags_ = src.stream_footer_flags_;
