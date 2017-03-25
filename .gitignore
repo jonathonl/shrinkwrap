@@ -28,5 +28,5 @@
 *.out
 *.app
 
-JetBrains
+#JetBrains
 .idea

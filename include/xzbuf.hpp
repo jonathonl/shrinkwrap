@@ -20,9 +20,10 @@ public:
     fp_(fopen(file_path.c_str(), "rb")),
     put_back_size_(0),
     lzma_index_(nullptr),
-    at_block_boundary_(true)
+    at_block_boundary_(true),
+    lzma_block_decoder_(LZMA_STREAM_INIT)
   {
-    lzma_block_decoder_ = LZMA_STREAM_INIT;
+
     fread(stream_header_.data(), stream_header_.size(), 1, fp_); // TODO: handle error.
     lzma_res_ = lzma_stream_header_decode(&stream_header_flags_, stream_header_.data());
     if (lzma_res_ != LZMA_OK)
@@ -33,7 +34,10 @@ public:
     setg(end, end, end);
   }
 
-  ixzbuf(ixzbuf&& src)
+  ixzbuf(ixzbuf&& src) :
+    fp_(nullptr),
+    lzma_index_(nullptr),
+    lzma_block_decoder_(LZMA_STREAM_INIT)
   {
     operator=(std::move(src));
   }
