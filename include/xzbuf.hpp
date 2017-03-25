@@ -35,44 +35,18 @@ public:
   }
 
   ixzbuf(ixzbuf&& src) :
-    fp_(nullptr),
-    lzma_index_(nullptr),
-    lzma_block_decoder_(LZMA_STREAM_INIT)
+    std::streambuf(std::move(src))
   {
-    operator=(std::move(src));
+    this->move(std::move(src));
   }
 
   ixzbuf& operator=(ixzbuf&& src)
   {
     if (&src != this)
     {
-      this->destroy();
-
       std::streambuf::operator=(std::move(src));
-
-      stream_header_flags_ = src.stream_header_flags_;
-      stream_footer_flags_ = src.stream_footer_flags_;
-      lzma_block_decoder_ = src.lzma_block_decoder_;
-      if (src.lzma_block_decoder_.internal)
-        src.lzma_block_decoder_.internal = nullptr;
-      lzma_block_ = src.lzma_block_;
-      lzma_block_filters_buf_ = src.lzma_block_filters_buf_; // TODO: handle filter.options
-      lzma_index_itr_ = src.lzma_index_itr_; // lzma_index_iter_init() doesn't allocate any memory, thus there is no lzma_index_iter_end().
-      stream_header_ = src.stream_header_;
-      stream_footer_ = src.stream_footer_;
-      compressed_buffer_ = src.compressed_buffer_;
-      decompressed_buffer_ = src.decompressed_buffer_;
-      decoded_position_ = src.decoded_position_;
-      discard_amount_ = src.discard_amount_;
-      fp_ = src.fp_;
-      if (src.fp_)
-        src.fp_ = nullptr;
-      put_back_size_ = src.put_back_size_;
-      lzma_index_ = src.lzma_index_;
-      if (src.lzma_index_)
-        src.lzma_index_ = nullptr;
-      lzma_res_ = src.lzma_res_;
-      at_block_boundary_ = src.at_block_boundary_;
+      this->destroy();
+      this->move(std::move(src));
     }
 
     return *this;
@@ -95,6 +69,33 @@ private:
       lzma_index_end(lzma_index_, nullptr);
     if (fp_)
       fclose(fp_);
+  }
+
+  void move(ixzbuf&& src)
+  {
+    stream_header_flags_ = src.stream_header_flags_;
+    stream_footer_flags_ = src.stream_footer_flags_;
+    lzma_block_decoder_ = src.lzma_block_decoder_;
+    if (src.lzma_block_decoder_.internal)
+      src.lzma_block_decoder_.internal = nullptr;
+    lzma_block_ = src.lzma_block_;
+    lzma_block_filters_buf_ = src.lzma_block_filters_buf_; // TODO: handle filter.options
+    lzma_index_itr_ = src.lzma_index_itr_; // lzma_index_iter_init() doesn't allocate any memory, thus there is no lzma_index_iter_end().
+    stream_header_ = src.stream_header_;
+    stream_footer_ = src.stream_footer_;
+    compressed_buffer_ = src.compressed_buffer_;
+    decompressed_buffer_ = src.decompressed_buffer_;
+    decoded_position_ = src.decoded_position_;
+    discard_amount_ = src.discard_amount_;
+    fp_ = src.fp_;
+    if (src.fp_)
+      src.fp_ = nullptr;
+    put_back_size_ = src.put_back_size_;
+    lzma_index_ = src.lzma_index_;
+    if (src.lzma_index_)
+      src.lzma_index_ = nullptr;
+    lzma_res_ = src.lzma_res_;
+    at_block_boundary_ = src.at_block_boundary_;
   }
 
   std::streambuf::int_type underflow()
