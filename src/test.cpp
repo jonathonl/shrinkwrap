@@ -15,7 +15,7 @@
 class test_base
 {
 public:
-  test_base(const std::string& file_path, std::size_t block_size):
+  test_base(const std::string& file_path, std::size_t block_size = std::numeric_limits<std::size_t>::max()):
     file_(file_path),
     block_size_(block_size)
   {
@@ -46,11 +46,7 @@ protected:
 class iterator_test: public test_base
 {
 public:
-  iterator_test(const std::string& file_path, std::size_t block_size = std::numeric_limits<std::size_t>::max()) :
-    test_base(file_path, block_size)
-  {
-  }
-
+  using test_base::test_base;
   bool operator()()
   {
     bool ret = false;
@@ -99,11 +95,7 @@ private:
 class seek_test : public test_base
 {
 public:
-  seek_test(const std::string& file_path, std::size_t block_size = std::numeric_limits<std::size_t>::max()) :
-    test_base(file_path, block_size)
-  {
-
-  }
+  using test_base::test_base;
 
   bool operator()()
   {

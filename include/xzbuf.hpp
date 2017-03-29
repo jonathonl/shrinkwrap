@@ -371,7 +371,7 @@ private:
       while (lzma_res_ == LZMA_OK)
       {
         lzma_res_ = lzma_code(&lzma_stream_encoder_, LZMA_FINISH);
-        if (lzma_stream_encoder_.avail_out == 0 || lzma_res_ == LZMA_STREAM_END)
+        if (lzma_stream_encoder_.avail_out == 0 || (lzma_res_ == LZMA_STREAM_END && compressed_buffer_.size() != lzma_stream_encoder_.avail_out))
         {
           if (!fwrite(compressed_buffer_.data(), compressed_buffer_.size() - lzma_stream_encoder_.avail_out, 1, fp_))
           {
@@ -434,7 +434,7 @@ private:
       while (lzma_res_ == LZMA_OK)
       {
         lzma_res_ = lzma_code(&lzma_stream_encoder_, LZMA_FULL_FLUSH);
-        if (lzma_stream_encoder_.avail_out == 0 || lzma_res_ == LZMA_STREAM_END)
+        if (lzma_stream_encoder_.avail_out == 0 || (lzma_res_ == LZMA_STREAM_END && compressed_buffer_.size() != lzma_stream_encoder_.avail_out))
         {
           if (!fwrite(compressed_buffer_.data(), compressed_buffer_.size() - lzma_stream_encoder_.avail_out, 1, fp_))
           {
