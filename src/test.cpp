@@ -160,9 +160,7 @@ int main(int argc, char* argv[])
     if (sub_command == "seek")
       ret = !(seek_test("test_seek_file.txt.xz")());
     else if (sub_command == "iterator")
-    {
-      ret = !(iterator_test("test_iterator_file.txt.xz")() && iterator_test("test_iterator_file_512.txt.xz", 512)());
-    }
+      ret = !(iterator_test("test_iterator_file.txt.xz")() && iterator_test("test_iterator_file_512.txt.xz", 512)() && iterator_test("test_iterator_file_1024.txt.xz", 1024)());
   }
 
   return ret;
