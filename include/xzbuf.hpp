@@ -335,28 +335,19 @@ public:
     setp((char*)decompressed_buffer_.data(), end);
   }
 
-  oxzbuf(oxzbuf&& src)
+  oxzbuf(oxzbuf&& src) :
+    std::streambuf(std::move(src))
   {
-    operator=(std::move(src));
+    this->move(std::move(src));
   }
 
   oxzbuf& operator=(oxzbuf&& src)
   {
     if (&src != this)
     {
-      this->close();
-
       std::streambuf::operator=(std::move(src));
-
-      compressed_buffer_ = src.compressed_buffer_;
-      decompressed_buffer_ = src.decompressed_buffer_;
-      lzma_stream_encoder_ = src.lzma_stream_encoder_;
-      if (src.lzma_stream_encoder_.internal)
-        src.lzma_stream_encoder_.internal = nullptr;
-      fp_ = src.fp_;
-      if (src.fp_)
-        src.fp_ = nullptr;
-      lzma_res_ = src.lzma_res_;
+      this->close();
+      this->move(std::move(src));
     }
 
     return *this;
@@ -367,6 +358,19 @@ public:
     this->close();
   }
 private:
+  void move(oxzbuf&& src)
+  {
+    compressed_buffer_ = src.compressed_buffer_;
+    decompressed_buffer_ = src.decompressed_buffer_;
+    lzma_stream_encoder_ = src.lzma_stream_encoder_;
+    if (src.lzma_stream_encoder_.internal)
+      src.lzma_stream_encoder_.internal = nullptr;
+    fp_ = src.fp_;
+    if (src.fp_)
+      src.fp_ = nullptr;
+    lzma_res_ = src.lzma_res_;
+  }
+
   void close()
   {
     if (lzma_stream_encoder_.internal)
