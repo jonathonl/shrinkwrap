@@ -1,0 +1,1 @@
+xz,http://tukaani.org/xz/xz-5.2.3.tar.bz2 --cmake dep/xz.cmake
