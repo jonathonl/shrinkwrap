@@ -1,5 +1,5 @@
 
-#include "xzbuf.hpp"
+#include "shrinkwrap/xzbuf.hpp"
 #include <fstream>
 
 #include <iostream>
@@ -11,7 +11,7 @@
 #include <sstream>
 #include <limits>
 
-
+namespace sw = shrinkwrap;
 class test_base
 {
 public:
@@ -29,7 +29,7 @@ protected:
 
   static bool generate_test_file(const std::string& file_path, std::size_t block_size)
   {
-    oxzstream ofs(file_path);
+    sw::oxzstream ofs(file_path);
     for (std::size_t i = 0; i < (2048 / 4) && ofs.good(); ++i)
     {
       if (((i * 4) % block_size) == 0)
@@ -72,7 +72,7 @@ public:
 private:
   bool run(const std::string& file_path)
   {
-    ixzbuf sbuf(file_path);
+    sw::ixzbuf sbuf(file_path);
     std::istreambuf_iterator<char> it(&sbuf);
     std::istreambuf_iterator<char> end;
 
@@ -122,7 +122,7 @@ public:
 private:
   static bool run(const std::string& file_path)
   {
-    ixzstream ifs(file_path);
+    sw::ixzstream ifs(file_path);
     std::vector<int> pos_sequence;
     pos_sequence.reserve(128);
     std::mt19937 rg(std::uint32_t(std::chrono::system_clock::now().time_since_epoch().count()));

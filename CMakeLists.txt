@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.2)
 include(ExternalProject)
 include(CMakePackageConfigHelpers)
-project(xzbuf VERSION 1.0.0)
+project(shrinkwrap VERSION 1.0.0)
 
 enable_testing()
 
@@ -21,7 +21,7 @@ if (NOT LIBLZMA_LIBRARIES)
 endif()
 
 add_library(xzbuf INTERFACE)
-target_sources(xzbuf INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/xzbuf.hpp>)
+target_sources(xzbuf INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/shrinkwrap/xzbuf.hpp>)
 target_include_directories(xzbuf INTERFACE
                            $<INSTALL_INTERFACE:include>
                            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
@@ -33,8 +33,8 @@ target_link_libraries(xzbuf-test xzbuf)
 add_test(seek_test xzbuf-test seek)
 add_test(iterator_test xzbuf-test iterator)
 
-install(FILES $<TARGET_PROPERTY:xzbuf,INTERFACE_SOURCES> DESTINATION include)
-install(TARGETS xzbuf EXPORT xzbuf-config
+install(DIRECTORY include/shrinkwrap DESTINATION include)
+install(TARGETS xzbuf EXPORT ${PROJECT_NAME}-config
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib)
 
