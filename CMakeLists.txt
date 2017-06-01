@@ -35,8 +35,10 @@ target_link_libraries(xzbuf INTERFACE ${LIBLZMA_LIBRARIES} ${ZLIB_LIBRARIES})
 add_executable(xzbuf-test src/test.cpp)
 target_link_libraries(xzbuf-test xzbuf)
 
-add_test(seek_test xzbuf-test seek)
-add_test(iterator_test xzbuf-test iterator)
+add_test(xz_seek_test xzbuf-test xzseek)
+add_test(xz_iterator_test xzbuf-test xziter)
+add_test(bgz_seek_test xzbuf-test bgzseek)
+add_test(bgz_iterator_test xzbuf-test bgziter)
 
 install(DIRECTORY include/shrinkwrap DESTINATION include)
 install(TARGETS xzbuf EXPORT ${PROJECT_NAME}-config
