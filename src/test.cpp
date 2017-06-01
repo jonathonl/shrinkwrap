@@ -1,5 +1,6 @@
 
 #include "shrinkwrap/xzbuf.hpp"
+#include "shrinkwrap/gzbuf.hpp"
 #include <fstream>
 
 #include <iostream>
@@ -12,6 +13,8 @@
 #include <limits>
 
 namespace sw = shrinkwrap;
+
+template <typename InT, typename OutT>
 class test_base
 {
 public:
@@ -29,7 +32,7 @@ protected:
 
   static bool generate_test_file(const std::string& file_path, std::size_t block_size)
   {
-    sw::oxzstream ofs(file_path);
+    OutT ofs(file_path);
     for (std::size_t i = 0; i < (2048 / 4) && ofs.good(); ++i)
     {
       if (((i * 4) % block_size) == 0)
@@ -43,21 +46,22 @@ protected:
   std::size_t block_size_;
 };
 
-class iterator_test: public test_base
+template <typename InT, typename OutT>
+class iterator_test: public test_base<InT, OutT>
 {
 public:
-  using test_base::test_base;
+  using test_base<InT, OutT>::test_base;
   bool operator()()
   {
     bool ret = false;
 
-    if ((file_exists(file_) &&  std::remove(file_.c_str()) != 0) || !generate_test_file(file_, block_size_))
+    if ((test_base<InT, OutT>::file_exists(this->file_) &&  std::remove(this->file_.c_str()) != 0) || !test_base<InT, OutT>::generate_test_file(this->file_, this->block_size_))
     {
       std::cerr << "FAILED to generate test file." << std::endl;
     }
     else
     {
-      if (!run(file_))
+      if (!run(this->file_))
       {
         std::cerr << "FAILED iterator test." << std::endl;
       }
@@ -72,9 +76,9 @@ public:
 private:
   bool run(const std::string& file_path)
   {
-    sw::ixzbuf sbuf(file_path);
-    std::istreambuf_iterator<char> it(&sbuf);
-    std::istreambuf_iterator<char> end;
+    InT is(file_path);
+    std::istreambuf_iterator<char> it(is.rdbuf());
+    std::istreambuf_iterator<char> end{};
 
     std::size_t integer = 0;
     for (std::size_t i = 0; it != end; ++i)
@@ -92,22 +96,23 @@ private:
   }
 };
 
-class seek_test : public test_base
+template <typename InT, typename OutT>
+class seek_test : public test_base<InT, OutT>
 {
 public:
-  using test_base::test_base;
+  using test_base<InT, OutT>::test_base;
 
   bool operator()()
   {
     bool ret = false;
 
-    if ((file_exists(file_) && std::remove(file_.c_str()) != 0) || !generate_test_file(file_, block_size_))
+    if ((test_base<InT, OutT>::file_exists(this->file_) && std::remove(this->file_.c_str()) != 0) || !test_base<InT, OutT>::generate_test_file(this->file_, this->block_size_))
     {
       std::cerr << "FAILED to generate test file" << std::endl;
     }
     else
     {
-      if (!run(file_))
+      if (!run(this->file_))
       {
         std::cerr << "FAILED seek test." << std::endl;
       }
@@ -122,7 +127,7 @@ public:
 private:
   static bool run(const std::string& file_path)
   {
-    sw::ixzstream ifs(file_path);
+    InT ifs(file_path);
     std::vector<int> pos_sequence;
     pos_sequence.reserve(128);
     std::mt19937 rg(std::uint32_t(std::chrono::system_clock::now().time_since_epoch().count()));
@@ -157,10 +162,12 @@ int main(int argc, char* argv[])
   if (argc > 1)
   {
     std::string sub_command = argv[1];
-    if (sub_command == "seek")
-      ret = !(seek_test("test_seek_file.txt.xz")());
-    else if (sub_command == "iterator")
-      ret = !(iterator_test("test_iterator_file.txt.xz")() && iterator_test("test_iterator_file_512.txt.xz", 512)() && iterator_test("test_iterator_file_1024.txt.xz", 1024)());
+    if (sub_command == "xzseek")
+      ret = !(seek_test<sw::ixzstream, sw::oxzstream>("test_seek_file.txt.xz")());
+    else if (sub_command == "xziter")
+      ret = !(iterator_test<sw::ixzstream, sw::oxzstream>("test_iterator_file.txt.xz")() && iterator_test<sw::ixzstream, sw::oxzstream>("test_iterator_file_512.txt.xz", 512)() && iterator_test<sw::ixzstream, sw::oxzstream>("test_iterator_file_1024.txt.xz", 1024)());
+    else if (sub_command == "bgziter")
+      ret = !(iterator_test<sw::igzstream, sw::obgzstream>("test_iterator_file.txt.bgzf")() && iterator_test<sw::igzstream, sw::obgzstream>("test_iterator_file_512.txt.bgzf", 512)() && iterator_test<sw::igzstream, sw::obgzstream>("test_iterator_file_1024.txt.bgzf", 1024)());
   }
 
   return ret;

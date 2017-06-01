@@ -9,12 +9,17 @@ set(CMAKE_CXX_STANDARD 11)
 
 if (BUILD_SHARED_LIBS)
     set(LIBLZMA_LIB_NAME ${CMAKE_SHARED_LIBRARY_PREFIX}lzma${CMAKE_SHARED_LIBRARY_SUFFIX})
+    set(ZLIB_LIB_NAME ${CMAKE_SHARED_LIBRARY_PREFIX}z${CMAKE_SHARED_LIBRARY_SUFFIX})
 else()
     set(LIBLZMA_LIB_NAME ${CMAKE_STATIC_LIBRARY_PREFIX}lzma${CMAKE_STATIC_LIBRARY_SUFFIX})
+    set(ZLIB_LIB_NAME ${CMAKE_STATIC_LIBRARY_PREFIX}z${CMAKE_STATIC_LIBRARY_SUFFIX})
 endif()
 
 find_library(LIBLZMA_LIBRARIES
              NAMES ${LIBLZMA_LIB_NAME})
+
+find_library(ZLIB_LIBRARIES
+             NAMES ${ZLIB_LIB_NAME})
 
 if (NOT LIBLZMA_LIBRARIES)
     message(FATAL_ERROR "lzma library not found")
@@ -25,7 +30,7 @@ target_sources(xzbuf INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/inc
 target_include_directories(xzbuf INTERFACE
                            $<INSTALL_INTERFACE:include>
                            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
-target_link_libraries(xzbuf INTERFACE ${LIBLZMA_LIBRARIES})
+target_link_libraries(xzbuf INTERFACE ${LIBLZMA_LIBRARIES} ${ZLIB_LIBRARIES})
 
 add_executable(xzbuf-test src/test.cpp)
 target_link_libraries(xzbuf-test xzbuf)

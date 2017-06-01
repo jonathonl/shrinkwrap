@@ -1,5 +1,5 @@
-# xzbuf
-A streambuf for xz files.
+# Shrink Wrap
+An STL streambuf wrapper for compression formats.
 
 ## ixzbuf with std::istream
 ```c++
@@ -44,4 +44,4 @@ while (std::cin)
 ```
 
 ## Caveats
-* Does not support files with concatenated streams.
+* Does not support files with concatenated xz streams.

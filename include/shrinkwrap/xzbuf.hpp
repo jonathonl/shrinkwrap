@@ -1,5 +1,5 @@
-#ifndef XZBUF_XZBUF_HPP
-#define XZBUF_XZBUF_HPP
+#ifndef SHRINKWRAP_XZBUF_HPP
+#define SHRINKWRAP_XZBUF_HPP
 
 #include <streambuf>
 #include <array>
@@ -569,4 +569,4 @@ namespace shrinkwrap
   };
 }
 
-#endif //XZBUF_XZBUF_HPP
+#endif //SHRINKWRAP_XZBUF_HPP
