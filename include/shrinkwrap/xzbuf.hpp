@@ -58,53 +58,12 @@ namespace shrinkwrap
       return *this;
     }
 
-    ~ixzbuf()
+    virtual ~ixzbuf()
     {
       this->destroy();
     }
-
-  private:
-    //ixzbuf(const ixzbuf& src) = delete;
-    //ixzbuf& operator=(const ixzbuf& src) = delete;
-
-    void destroy()
-    {
-      if (lzma_block_decoder_.internal)
-        lzma_end(&lzma_block_decoder_);
-      if (lzma_index_)
-        lzma_index_end(lzma_index_, nullptr);
-      if (fp_)
-        fclose(fp_);
-    }
-
-    void move(ixzbuf&& src)
-    {
-      stream_header_flags_ = src.stream_header_flags_;
-      stream_footer_flags_ = src.stream_footer_flags_;
-      lzma_block_decoder_ = src.lzma_block_decoder_;
-      if (src.lzma_block_decoder_.internal)
-        src.lzma_block_decoder_.internal = nullptr;
-      lzma_block_ = src.lzma_block_;
-      lzma_block_filters_buf_ = src.lzma_block_filters_buf_; // TODO: handle filter.options
-      lzma_index_itr_ = src.lzma_index_itr_; // lzma_index_iter_init() doesn't allocate any memory, thus there is no lzma_index_iter_end().
-      stream_header_ = src.stream_header_;
-      stream_footer_ = src.stream_footer_;
-      compressed_buffer_ = src.compressed_buffer_;
-      decompressed_buffer_ = src.decompressed_buffer_;
-      decoded_position_ = src.decoded_position_;
-      discard_amount_ = src.discard_amount_;
-      fp_ = src.fp_;
-      if (src.fp_)
-        src.fp_ = nullptr;
-      put_back_size_ = src.put_back_size_;
-      lzma_index_ = src.lzma_index_;
-      if (src.lzma_index_)
-        src.lzma_index_ = nullptr;
-      lzma_res_ = src.lzma_res_;
-      at_block_boundary_ = src.at_block_boundary_;
-    }
-
-    std::streambuf::int_type underflow()
+  protected:
+    virtual std::streambuf::int_type underflow()
     {
       if (!fp_)
         return traits_type::eof();
@@ -212,13 +171,7 @@ namespace shrinkwrap
       return traits_type::to_int_type(*gptr());
     }
 
-    void replenish_compressed_buffer()
-    {
-      lzma_block_decoder_.next_in = compressed_buffer_.data();
-      lzma_block_decoder_.avail_in = fread(compressed_buffer_.data(), 1, compressed_buffer_.size(), fp_);
-    }
-
-    std::streambuf::pos_type seekoff(std::streambuf::off_type off, std::ios_base::seekdir way, std::ios_base::openmode which)
+    virtual std::streambuf::pos_type seekoff(std::streambuf::off_type off, std::ios_base::seekdir way, std::ios_base::openmode which)
     {
       std::uint64_t current_position = decoded_position_ - (egptr() - gptr());
       current_position += discard_amount_; // TODO: overflow check.
@@ -250,7 +203,7 @@ namespace shrinkwrap
       return seekpos(pos, which);
     }
 
-    std::streambuf::pos_type seekpos(std::streambuf::pos_type pos, std::ios_base::openmode which)
+    virtual std::streambuf::pos_type seekpos(std::streambuf::pos_type pos, std::ios_base::openmode which)
     {
       if (fp_ == 0 || sync())
         return pos_type(off_type(-1));
@@ -279,6 +232,52 @@ namespace shrinkwrap
 
       return pos;
     }
+  private:
+    //ixzbuf(const ixzbuf& src) = delete;
+    //ixzbuf& operator=(const ixzbuf& src) = delete;
+
+    void destroy()
+    {
+      if (lzma_block_decoder_.internal)
+        lzma_end(&lzma_block_decoder_);
+      if (lzma_index_)
+        lzma_index_end(lzma_index_, nullptr);
+      if (fp_)
+        fclose(fp_);
+    }
+
+    void move(ixzbuf&& src)
+    {
+      stream_header_flags_ = src.stream_header_flags_;
+      stream_footer_flags_ = src.stream_footer_flags_;
+      lzma_block_decoder_ = src.lzma_block_decoder_;
+      if (src.lzma_block_decoder_.internal)
+        src.lzma_block_decoder_.internal = nullptr;
+      lzma_block_ = src.lzma_block_;
+      lzma_block_filters_buf_ = src.lzma_block_filters_buf_; // TODO: handle filter.options
+      lzma_index_itr_ = src.lzma_index_itr_; // lzma_index_iter_init() doesn't allocate any memory, thus there is no lzma_index_iter_end().
+      stream_header_ = src.stream_header_;
+      stream_footer_ = src.stream_footer_;
+      compressed_buffer_ = src.compressed_buffer_;
+      decompressed_buffer_ = src.decompressed_buffer_;
+      decoded_position_ = src.decoded_position_;
+      discard_amount_ = src.discard_amount_;
+      fp_ = src.fp_;
+      if (src.fp_)
+        src.fp_ = nullptr;
+      put_back_size_ = src.put_back_size_;
+      lzma_index_ = src.lzma_index_;
+      if (src.lzma_index_)
+        src.lzma_index_ = nullptr;
+      lzma_res_ = src.lzma_res_;
+      at_block_boundary_ = src.at_block_boundary_;
+    }
+
+    void replenish_compressed_buffer()
+    {
+      lzma_block_decoder_.next_in = compressed_buffer_.data();
+      lzma_block_decoder_.avail_in = fread(compressed_buffer_.data(), 1, compressed_buffer_.size(), fp_);
+    }
 
     bool init_index()
     {
@@ -305,7 +304,6 @@ namespace shrinkwrap
 
       return true;
     }
-
   private:
     lzma_stream_flags stream_header_flags_;
     lzma_stream_flags stream_footer_flags_;
@@ -375,52 +373,14 @@ namespace shrinkwrap
       return *this;
     }
 
-    ~oxzbuf()
+    virtual ~oxzbuf()
     {
       this->close();
     }
 
-  private:
-    void move(oxzbuf&& src)
-    {
-      compressed_buffer_ = src.compressed_buffer_;
-      decompressed_buffer_ = src.decompressed_buffer_;
-      lzma_stream_encoder_ = src.lzma_stream_encoder_;
-      if (src.lzma_stream_encoder_.internal)
-        src.lzma_stream_encoder_.internal = nullptr;
-      fp_ = src.fp_;
-      if (src.fp_)
-        src.fp_ = nullptr;
-      lzma_res_ = src.lzma_res_;
-    }
+  protected:
 
-    void close()
-    {
-      if (lzma_stream_encoder_.internal)
-      {
-        lzma_stream_encoder_.next_in = decompressed_buffer_.data();
-        lzma_stream_encoder_.avail_in = decompressed_buffer_.size() - (epptr() - pptr());
-        while (lzma_res_ == LZMA_OK)
-        {
-          lzma_res_ = lzma_code(&lzma_stream_encoder_, LZMA_FINISH);
-          if (lzma_stream_encoder_.avail_out == 0 || (lzma_res_ == LZMA_STREAM_END && compressed_buffer_.size() != lzma_stream_encoder_.avail_out))
-          {
-            if (!fwrite(compressed_buffer_.data(), compressed_buffer_.size() - lzma_stream_encoder_.avail_out, 1, fp_))
-            {
-              break;
-            }
-            lzma_stream_encoder_.next_out = compressed_buffer_.data();
-            lzma_stream_encoder_.avail_out = compressed_buffer_.size();
-          }
-        }
-        lzma_end(&lzma_stream_encoder_);
-      }
-
-      if (fp_)
-        fclose(fp_);
-    }
-
-    int overflow(int c)
+    virtual int overflow(int c)
     {
       if (!fp_)
         return traits_type::eof();
@@ -460,7 +420,7 @@ namespace shrinkwrap
       return (lzma_res_ == LZMA_OK ? traits_type::to_int_type(c) : traits_type::eof());
     }
 
-    int sync()
+    virtual int sync()
     {
       if (!fp_)
         return -1;
@@ -497,6 +457,46 @@ namespace shrinkwrap
       return 0;
     }
 
+  private:
+
+    void move(oxzbuf&& src)
+    {
+      compressed_buffer_ = src.compressed_buffer_;
+      decompressed_buffer_ = src.decompressed_buffer_;
+      lzma_stream_encoder_ = src.lzma_stream_encoder_;
+      if (src.lzma_stream_encoder_.internal)
+        src.lzma_stream_encoder_.internal = nullptr;
+      fp_ = src.fp_;
+      if (src.fp_)
+        src.fp_ = nullptr;
+      lzma_res_ = src.lzma_res_;
+    }
+
+    void close()
+    {
+      if (lzma_stream_encoder_.internal)
+      {
+        lzma_stream_encoder_.next_in = decompressed_buffer_.data();
+        lzma_stream_encoder_.avail_in = decompressed_buffer_.size() - (epptr() - pptr());
+        while (lzma_res_ == LZMA_OK)
+        {
+          lzma_res_ = lzma_code(&lzma_stream_encoder_, LZMA_FINISH);
+          if (lzma_stream_encoder_.avail_out == 0 || (lzma_res_ == LZMA_STREAM_END && compressed_buffer_.size() != lzma_stream_encoder_.avail_out))
+          {
+            if (!fwrite(compressed_buffer_.data(), compressed_buffer_.size() - lzma_stream_encoder_.avail_out, 1, fp_))
+            {
+              break;
+            }
+            lzma_stream_encoder_.next_out = compressed_buffer_.data();
+            lzma_stream_encoder_.avail_out = compressed_buffer_.size();
+          }
+        }
+        lzma_end(&lzma_stream_encoder_);
+      }
+
+      if (fp_)
+        fclose(fp_);
+    }
   private:
     static const std::size_t default_block_size = 1024; //4 * 1024 * 1024;
     std::array<std::uint8_t, (default_block_size >= LZMA_BLOCK_HEADER_SIZE_MAX ? default_block_size : LZMA_BLOCK_HEADER_SIZE_MAX)> compressed_buffer_;

@@ -155,6 +155,79 @@ private:
   }
 };
 
+template <typename InT, typename OutT>
+class virtual_offset_seek_test : public test_base<InT, OutT>
+{
+public:
+  using test_base<InT, OutT>::test_base;
+
+  bool operator()()
+  {
+    bool ret = false;
+
+    if ((test_base<InT, OutT>::file_exists(this->file_) && std::remove(this->file_.c_str()) != 0) || !test_base<InT, OutT>::generate_test_file(this->file_, this->block_size_))
+    {
+      std::cerr << "FAILED to generate test file" << std::endl;
+    }
+    else
+    {
+      if (!run(this->file_))
+      {
+        std::cerr << "FAILED seek test." << std::endl;
+      }
+      else
+      {
+        ret = true;
+      }
+    }
+
+    return ret;
+  }
+private:
+  static bool run(const std::string& file_path)
+  {
+    InT ifs(file_path);
+    std::vector<int> pos_sequence;
+    pos_sequence.reserve(128);
+    std::mt19937 rg(std::uint32_t(std::chrono::system_clock::now().time_since_epoch().count()));
+    for (unsigned i = 0; i < 128 && ifs.good(); ++i)
+    {
+      int val = 2048 / 4;
+      int pos = rg() % val;
+      pos_sequence.push_back(pos);
+
+      std::uint64_t virtual_offset{};
+      {
+        InT idx_ifs(file_path);
+        virtual_offset = idx_ifs.tellg();
+        int tmp;
+        while (idx_ifs >> tmp)
+        {
+          if (tmp == pos)
+            break;
+          virtual_offset = idx_ifs.tellg();
+        }
+      }
+
+      ifs.seekg(virtual_offset);
+      ifs >> val;
+      if (val != pos)
+      {
+        std::cerr << "Seek failure sequence:" << std::endl;
+        for (auto it = pos_sequence.begin(); it != pos_sequence.end(); ++it)
+        {
+          if (it != pos_sequence.begin())
+            std::cerr << ",";
+          std::cerr << *it;
+        }
+        std::cerr << std::endl;
+        return false;
+      }
+    }
+    return ifs.good();
+  }
+};
+
 int main(int argc, char* argv[])
 {
   int ret = -1;
@@ -166,8 +239,10 @@ int main(int argc, char* argv[])
       ret = !(seek_test<sw::ixzstream, sw::oxzstream>("test_seek_file.txt.xz")());
     else if (sub_command == "xziter")
       ret = !(iterator_test<sw::ixzstream, sw::oxzstream>("test_iterator_file.txt.xz")() && iterator_test<sw::ixzstream, sw::oxzstream>("test_iterator_file_512.txt.xz", 512)() && iterator_test<sw::ixzstream, sw::oxzstream>("test_iterator_file_1024.txt.xz", 1024)());
+    else if (sub_command == "bgzseek")
+      ret = !(virtual_offset_seek_test<sw::ibgzstream, sw::obgzstream>("test_seek_file.txt.bgzf", 512)());
     else if (sub_command == "bgziter")
-      ret = !(iterator_test<sw::igzstream, sw::obgzstream>("test_iterator_file.txt.bgzf")() && iterator_test<sw::igzstream, sw::obgzstream>("test_iterator_file_512.txt.bgzf", 512)() && iterator_test<sw::igzstream, sw::obgzstream>("test_iterator_file_1024.txt.bgzf", 1024)());
+      ret = !(iterator_test<sw::ibgzstream, sw::obgzstream>("test_iterator_file.txt.bgzf")() && iterator_test<sw::ibgzstream, sw::obgzstream>("test_iterator_file_512.txt.bgzf", 512)() && iterator_test<sw::ibgzstream, sw::obgzstream>("test_iterator_file_1024.txt.bgzf", 1024)());
   }
 
   return ret;

@@ -21,8 +21,9 @@ namespace shrinkwrap
       //zstrm_({0}),
       compressed_buffer_(default_block_size),
       decompressed_buffer_(default_block_size),
-      decoded_position_(0),
       discard_amount_(0),
+      current_block_position_(0),
+      uncompressed_block_offset_(0),
       fp_(fopen(file_path.c_str(), "rb")),
       put_back_size_(0),
       at_block_boundary_(false)
@@ -63,7 +64,7 @@ namespace shrinkwrap
       return *this;
     }
 
-    ~igzbuf()
+    virtual ~igzbuf()
     {
       this->destroy();
     }
@@ -87,8 +88,9 @@ namespace shrinkwrap
       src.zstrm_ = {0};
       compressed_buffer_ = src.compressed_buffer_;
       decompressed_buffer_ = src.decompressed_buffer_;
-      decoded_position_ = src.decoded_position_;
       discard_amount_ = src.discard_amount_;
+      current_block_position_ = src.current_block_position_;
+      uncompressed_block_offset_ = src.uncompressed_block_offset_;
       at_block_boundary_ = src.at_block_boundary_;
       fp_ = src.fp_;
       if (src.fp_)
@@ -97,7 +99,13 @@ namespace shrinkwrap
       zlib_res_ = src.zlib_res_;
     }
 
-    std::streambuf::int_type underflow()
+    void replenish_compressed_buffer()
+    {
+      zstrm_.next_in = compressed_buffer_.data();
+      zstrm_.avail_in = fread(compressed_buffer_.data(), 1, compressed_buffer_.size(), fp_);
+    }
+  protected:
+    virtual std::streambuf::int_type underflow()
     {
       if (!fp_)
         return traits_type::eof();
@@ -117,6 +125,11 @@ namespace shrinkwrap
 
 
         //assert(zstrm_.avail_in > 0);
+        if (zstrm_.total_in == 0)
+        {
+          current_block_position_ = (ftell(fp_) - zstrm_.avail_in);
+          uncompressed_block_offset_ = 0;
+        }
 
         int r = inflate(&zstrm_, Z_NO_FLUSH);
         if (r == Z_STREAM_END)
@@ -133,7 +146,7 @@ namespace shrinkwrap
 
         char* start = ((char*) decompressed_buffer_.data());
         setg(start, start, start + (decompressed_buffer_.size() - zstrm_.avail_out));
-        decoded_position_ += (egptr() - gptr());
+        uncompressed_block_offset_ += (egptr() - gptr());
 
         if (discard_amount_ > 0)
         {
@@ -153,86 +166,92 @@ namespace shrinkwrap
       return traits_type::to_int_type(*gptr());
     }
 
-    void replenish_compressed_buffer()
+    virtual std::streambuf::pos_type seekoff(std::streambuf::off_type off, std::ios_base::seekdir way, std::ios_base::openmode which)
     {
-      zstrm_.next_in = compressed_buffer_.data();
-      zstrm_.avail_in = fread(compressed_buffer_.data(), 1, compressed_buffer_.size(), fp_);
+      return pos_type(off_type(-1));
     }
 
-//    std::streambuf::pos_type seekoff(std::streambuf::off_type off, std::ios_base::seekdir way, std::ios_base::openmode which)
-//    {
-//      std::uint64_t current_position = decoded_position_ - (egptr() - gptr());
-//      current_position += discard_amount_; // TODO: overflow check.
-//
-//      pos_type pos{off_type(current_position)};
-//
-//      if (off == 0 && way == std::ios::cur)
-//        return pos; // Supports tellg for streams that can't seek.
-//
-//      if (way == std::ios::cur)
-//      {
-//        pos = pos + off;
-//      }
-//      else if (way == std::ios::end)
-//      {
-//        if (!lzma_index_)
-//        {
-//          if (!init_index())
-//            return pos_type(off_type(-1));
-//        }
-//
-//        pos = pos_type(lzma_index_uncompressed_size(lzma_index_)) + off;
-//      }
-//      else
-//      {
-//        pos = off;
-//      }
-//
-//      return seekpos(pos, which);
-//    }
-//
-//    std::streambuf::pos_type seekpos(std::streambuf::pos_type pos, std::ios_base::openmode which)
-//    {
-//      if (fp_ == 0 || sync())
-//        return pos_type(off_type(-1));
-//
-//      if (!lzma_index_) //stream_flags_.backward_size == LZMA_VLI_UNKNOWN)
-//      {
-//        if (!init_index())
-//          return pos_type(off_type(-1));
-//      }
-//
-//      if (lzma_index_iter_locate(&lzma_index_itr_, (std::uint64_t) off_type(pos))) // Returns true on failure.
-//        return pos_type(off_type(-1));
-//
-//      long seek_amount = (lzma_index_itr_.block.compressed_file_offset > std::numeric_limits<long>::max() ? std::numeric_limits<long>::max() : static_cast<long>(lzma_index_itr_.block.compressed_file_offset));
-//      if (fseek(fp_, seek_amount, SEEK_SET))
-//        return pos_type(off_type(-1));
-//
-//      discard_amount_ = off_type(pos) - lzma_index_itr_.block.uncompressed_file_offset;
-//      decoded_position_ = lzma_index_itr_.block.uncompressed_file_offset;
-//
-//      at_block_boundary_ = true;
-//      lzma_block_decoder_.next_in = nullptr;
-//      lzma_block_decoder_.avail_in = 0;
-//      char* end = ((char*) decompressed_buffer_.data()) + decompressed_buffer_.size();
-//      setg(end, end, end);
-//
-//      return pos;
-//    }
-
   private:
-    static const std::size_t default_block_size = 0xFFFF;
-    z_stream zstrm_;
     std::vector<std::uint8_t> compressed_buffer_;
     std::vector<std::uint8_t> decompressed_buffer_;
-    std::uint64_t decoded_position_;
-    std::uint64_t discard_amount_;
-    FILE* fp_;
     std::size_t put_back_size_;
-    int zlib_res_;
     bool at_block_boundary_;
+  protected:
+    static const std::size_t default_block_size = 0xFFFF;
+    int zlib_res_;
+    z_stream zstrm_;
+    std::uint64_t discard_amount_;
+    std::size_t current_block_position_;
+    std::size_t uncompressed_block_offset_;
+    FILE* fp_;
   };
+
+  class ibgzbuf : public igzbuf
+  {
+  public:
+    using igzbuf::igzbuf;
+
+    ibgzbuf(ibgzbuf&& src)
+      :
+      igzbuf(std::move(src))
+    {
+    }
+
+    ibgzbuf& operator=(ibgzbuf&& src)
+    {
+      if (&src != this)
+      {
+        igzbuf::operator=(std::move(src));
+      }
+
+      return *this;
+    }
+
+    virtual ~ibgzbuf()
+    {
+    }
+
+  protected:
+    virtual std::streambuf::pos_type seekoff(std::streambuf::off_type off, std::ios_base::seekdir way, std::ios_base::openmode which) // Supports tellg for virtual offset.
+    {
+      if (off == 0 && way == std::ios::cur)
+      {
+        std::uint64_t compressed_offset = current_block_position_;
+        std::uint16_t uncompressed_offset = (std::uint16_t(uncompressed_block_offset_) - (egptr() - gptr())) + discard_amount_;
+        std::uint64_t virtual_offset = ((compressed_offset << 16) | uncompressed_offset);
+        return pos_type(off_type(virtual_offset));
+      }
+      return pos_type(off_type(-1));
+    }
+
+    //coffset << 16 | uoffset
+    virtual std::streambuf::pos_type seekpos(std::streambuf::pos_type pos, std::ios_base::openmode which)
+    {
+      std::uint64_t compressed_offset = ((static_cast<std::uint64_t>(pos) >> 16) & 0x0000FFFFFFFFFFFF);
+      std::uint16_t uncompressed_offset = (std::uint16_t)(static_cast<std::uint64_t>(pos) & 0x000000000000FFFF);
+
+
+      if (fp_ == 0 || sync())
+        return pos_type(off_type(-1));
+
+      long seek_amount = static_cast<long>(compressed_offset);
+      if (fseek(fp_, seek_amount, SEEK_SET))
+        return pos_type(off_type(-1));
+
+      current_block_position_ = seek_amount;
+      discard_amount_ = uncompressed_offset;
+
+      zstrm_.next_in = nullptr;
+      zstrm_.avail_in = 0;
+      zlib_res_ = inflateReset(&zstrm_);
+      char* end = egptr();
+      setg(end, end, end);
+
+      return pos;
+    }
+  };
+
+
 
   class obgzbuf : public std::streambuf
   {
@@ -284,7 +303,7 @@ namespace shrinkwrap
       return *this;
     }
 
-    ~obgzbuf()
+    virtual ~obgzbuf()
     {
       this->close();
     }
@@ -312,8 +331,8 @@ namespace shrinkwrap
         fp_ = nullptr;
       }
     }
-
-    int overflow(int c)
+  protected:
+    virtual int overflow(int c)
     {
       if (!fp_)
         return traits_type::eof();
@@ -353,7 +372,7 @@ namespace shrinkwrap
       return (zlib_res_ == LZMA_OK ? traits_type::to_int_type(c) : traits_type::eof());
     }
 
-    int sync()
+    virtual int sync()
     {
       if (!fp_)
         return -1;
@@ -428,6 +447,37 @@ namespace shrinkwrap
 
   private:
     igzbuf sbuf_;
+  };
+
+  class ibgzstream : public std::istream
+  {
+  public:
+    ibgzstream(const std::string& file_path)
+      :
+      std::istream(&sbuf_),
+      sbuf_(file_path)
+    {
+    }
+
+    ibgzstream(ibgzstream&& src)
+      :
+      std::istream(&sbuf_),
+      sbuf_(std::move(src.sbuf_))
+    {
+    }
+
+    ibgzstream& operator=(ibgzstream&& src)
+    {
+      if (&src != this)
+      {
+        std::istream::operator=(std::move(src));
+        sbuf_ = std::move(src.sbuf_);
+      }
+      return *this;
+    }
+
+  private:
+    ibgzbuf sbuf_;
   };
 
   class obgzstream : public std::ostream
