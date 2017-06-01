@@ -1,5 +1,5 @@
 # Shrink Wrap
-An STL streambuf wrapper for compression formats.
+A std::streambuf wrapper for compression formats.
 
 ## ixzbuf with std::istream
 ```c++
