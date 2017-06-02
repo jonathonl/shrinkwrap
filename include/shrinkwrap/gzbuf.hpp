@@ -18,7 +18,7 @@ namespace shrinkwrap
   public:
     igzbuf(const std::string& file_path)
       :
-      //zstrm_({0}),
+      zstrm_({0}),
       compressed_buffer_(default_block_size),
       decompressed_buffer_(default_block_size),
       discard_amount_(0),
@@ -30,11 +30,6 @@ namespace shrinkwrap
     {
       if (fp_)
       {
-        zstrm_.zalloc = Z_NULL;
-        zstrm_.zfree = Z_NULL;
-        zstrm_.opaque = Z_NULL;
-        zstrm_.avail_in = 0;
-        zstrm_.next_in = Z_NULL;
         zlib_res_ = inflateInit2(&zstrm_, 15 + 16); // 16 for GZIP only.
         if (zlib_res_ != Z_OK)
         {
@@ -86,15 +81,14 @@ namespace shrinkwrap
     {
       zstrm_ = src.zstrm_;
       src.zstrm_ = {0};
-      compressed_buffer_ = src.compressed_buffer_;
-      decompressed_buffer_ = src.decompressed_buffer_;
+      compressed_buffer_ = std::move(src.compressed_buffer_);
+      decompressed_buffer_ = std::move(src.decompressed_buffer_);
       discard_amount_ = src.discard_amount_;
       current_block_position_ = src.current_block_position_;
       uncompressed_block_offset_ = src.uncompressed_block_offset_;
       at_block_boundary_ = src.at_block_boundary_;
       fp_ = src.fp_;
-      if (src.fp_)
-        src.fp_ = nullptr;
+      src.fp_ = nullptr;
       put_back_size_ = src.put_back_size_;
       zlib_res_ = src.zlib_res_;
     }
@@ -104,7 +98,9 @@ namespace shrinkwrap
       zstrm_.next_in = compressed_buffer_.data();
       zstrm_.avail_in = fread(compressed_buffer_.data(), 1, compressed_buffer_.size(), fp_);
     }
+
   protected:
+
     virtual std::streambuf::int_type underflow()
     {
       if (!fp_)
@@ -115,7 +111,7 @@ namespace shrinkwrap
       while (gptr() >= egptr() && zlib_res_ == Z_OK)
       {
         zstrm_.next_out = decompressed_buffer_.data();
-        zstrm_.avail_out = decompressed_buffer_.size();
+        zstrm_.avail_out = static_cast<std::uint32_t>(decompressed_buffer_.size());
 
         if (zstrm_.avail_in == 0 && !feof(fp_))
         {
@@ -127,7 +123,7 @@ namespace shrinkwrap
         //assert(zstrm_.avail_in > 0);
         if (zstrm_.total_in == 0)
         {
-          current_block_position_ = (ftell(fp_) - zstrm_.avail_in);
+          current_block_position_ = static_cast<std::uint64_t>((ftell(fp_) - zstrm_.avail_in));
           uncompressed_block_offset_ = 0;
         }
 
@@ -180,7 +176,7 @@ namespace shrinkwrap
     static const std::size_t default_block_size = 0xFFFF;
     int zlib_res_;
     z_stream zstrm_;
-    std::uint64_t discard_amount_;
+    std::uint16_t discard_amount_;
     std::size_t current_block_position_;
     std::size_t uncompressed_block_offset_;
     FILE* fp_;
@@ -217,7 +213,7 @@ namespace shrinkwrap
       if (off == 0 && way == std::ios::cur)
       {
         std::uint64_t compressed_offset = current_block_position_;
-        std::uint16_t uncompressed_offset = (std::uint16_t(uncompressed_block_offset_) - (egptr() - gptr())) + discard_amount_;
+        std::uint16_t uncompressed_offset = (std::uint16_t(uncompressed_block_offset_) - std::uint16_t(egptr() - gptr())) + discard_amount_;
         std::uint64_t virtual_offset = ((compressed_offset << 16) | uncompressed_offset);
         return pos_type(off_type(virtual_offset));
       }
@@ -238,7 +234,7 @@ namespace shrinkwrap
       if (fseek(fp_, seek_amount, SEEK_SET))
         return pos_type(off_type(-1));
 
-      current_block_position_ = seek_amount;
+      current_block_position_ = compressed_offset;
       discard_amount_ = uncompressed_offset;
 
       zstrm_.next_in = nullptr;
@@ -276,8 +272,8 @@ namespace shrinkwrap
           // TODO: handle error.
         }
 
-       zstrm_.next_out = compressed_buffer_.data();
-       zstrm_.avail_out = compressed_buffer_.size();
+        zstrm_.next_out = compressed_buffer_.data();
+        zstrm_.avail_out = static_cast<std::uint32_t>(compressed_buffer_.size());
 
         char* end = ((char*) decompressed_buffer_.data()) + decompressed_buffer_.size();
         setp((char*) decompressed_buffer_.data(), end);
@@ -345,7 +341,7 @@ namespace shrinkwrap
       else
       {
         zstrm_.next_in = decompressed_buffer_.data();
-        zstrm_.avail_in = decompressed_buffer_.size();
+        zstrm_.avail_in = static_cast<std::uint32_t>(decompressed_buffer_.size());
         while (zlib_res_ == Z_OK && zstrm_.avail_in > 0)
         {
           zlib_res_ = deflate(&zstrm_, Z_NO_FLUSH);
@@ -356,7 +352,7 @@ namespace shrinkwrap
             return traits_type::eof();
           }
           zstrm_.next_out = compressed_buffer_.data();
-          zstrm_.avail_out = compressed_buffer_.size();
+          zstrm_.avail_out = static_cast<std::uint32_t>(compressed_buffer_.size());
         }
 
         if (zlib_res_ == Z_STREAM_END)
@@ -376,7 +372,7 @@ namespace shrinkwrap
         return -1;
 
       zstrm_.next_in = decompressed_buffer_.data();
-      zstrm_.avail_in = decompressed_buffer_.size() - (epptr() - pptr());
+      zstrm_.avail_in = static_cast<std::uint32_t>(decompressed_buffer_.size() - (epptr() - pptr()));
       if (zstrm_.avail_in)
       {
         while (zlib_res_ == Z_OK && zstrm_.avail_in > 0)
@@ -389,7 +385,7 @@ namespace shrinkwrap
             return -1;
           }
           zstrm_.next_out = compressed_buffer_.data();
-          zstrm_.avail_out = compressed_buffer_.size();
+          zstrm_.avail_out = static_cast<std::uint32_t>(compressed_buffer_.size());
 
         }
 
@@ -436,7 +432,7 @@ namespace shrinkwrap
         }
 
         zstrm_.next_out = compressed_buffer_.data();
-        zstrm_.avail_out = compressed_buffer_.size();
+        zstrm_.avail_out = static_cast<std::uint32_t>(compressed_buffer_.size());
 
         char* end = ((char*) decompressed_buffer_.data()) + decompressed_buffer_.size();
         setp((char*) decompressed_buffer_.data(), end);
@@ -504,7 +500,7 @@ namespace shrinkwrap
       else
       {
         zstrm_.next_in = decompressed_buffer_.data();
-        zstrm_.avail_in = decompressed_buffer_.size();
+        zstrm_.avail_in = static_cast<std::uint32_t>(decompressed_buffer_.size());
         while (zlib_res_ == Z_OK)
         {
           zlib_res_ = deflate(&zstrm_, Z_FINISH);
@@ -515,7 +511,7 @@ namespace shrinkwrap
             return traits_type::eof();
           }
           zstrm_.next_out = compressed_buffer_.data();
-          zstrm_.avail_out = compressed_buffer_.size();
+          zstrm_.avail_out = static_cast<std::uint32_t>(compressed_buffer_.size());
 
         }
 
@@ -536,7 +532,7 @@ namespace shrinkwrap
         return -1;
 
       zstrm_.next_in = decompressed_buffer_.data();
-      zstrm_.avail_in = decompressed_buffer_.size() - (epptr() - pptr());
+      zstrm_.avail_in = static_cast<std::uint32_t>(decompressed_buffer_.size() - (epptr() - pptr()));
       if (zstrm_.avail_in)
       {
         while (zlib_res_ == Z_OK)
@@ -549,7 +545,7 @@ namespace shrinkwrap
             return -1;
           }
           zstrm_.next_out = compressed_buffer_.data();
-          zstrm_.avail_out = compressed_buffer_.size();
+          zstrm_.avail_out = static_cast<std::uint32_t>(compressed_buffer_.size());
 
         }
 

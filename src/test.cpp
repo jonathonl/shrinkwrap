@@ -11,6 +11,7 @@
 #include <iterator>
 #include <sstream>
 #include <limits>
+#include <shrinkwrap/gzbuf.hpp>
 
 namespace sw = shrinkwrap;
 
