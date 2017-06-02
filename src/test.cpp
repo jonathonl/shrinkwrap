@@ -239,6 +239,8 @@ int main(int argc, char* argv[])
       ret = !(seek_test<sw::ixzstream, sw::oxzstream>("test_seek_file.txt.xz")());
     else if (sub_command == "xziter")
       ret = !(iterator_test<sw::ixzstream, sw::oxzstream>("test_iterator_file.txt.xz")() && iterator_test<sw::ixzstream, sw::oxzstream>("test_iterator_file_512.txt.xz", 512)() && iterator_test<sw::ixzstream, sw::oxzstream>("test_iterator_file_1024.txt.xz", 1024)());
+    else if (sub_command == "gziter")
+      ret = !(iterator_test<sw::igzstream, sw::ogzstream>("test_iterator_file.txt.gz")() && iterator_test<sw::igzstream, sw::ogzstream>("test_iterator_file_512.txt.gz", 512)() && iterator_test<sw::igzstream, sw::ogzstream>("test_iterator_file_1024.txt.gz", 1024)());
     else if (sub_command == "bgzseek")
       ret = !(virtual_offset_seek_test<sw::ibgzstream, sw::obgzstream>("test_seek_file.txt.bgzf", 512)());
     else if (sub_command == "bgziter")

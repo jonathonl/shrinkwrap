@@ -25,23 +25,24 @@ if (NOT LIBLZMA_LIBRARIES)
     message(FATAL_ERROR "lzma library not found")
 endif()
 
-add_library(xzbuf INTERFACE)
-target_sources(xzbuf INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/shrinkwrap/xzbuf.hpp>)
-target_include_directories(xzbuf INTERFACE
+add_library(shrinkwrap INTERFACE)
+target_sources(shrinkwrap INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/shrinkwrap/xzbuf.hpp;${CMAKE_CURRENT_SOURCE_DIR}/include/shrinkwrap/gzbuf.hpp>)
+target_include_directories(shrinkwrap INTERFACE
                            $<INSTALL_INTERFACE:include>
                            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
-target_link_libraries(xzbuf INTERFACE ${LIBLZMA_LIBRARIES} ${ZLIB_LIBRARIES})
+target_link_libraries(shrinkwrap INTERFACE ${LIBLZMA_LIBRARIES} ${ZLIB_LIBRARIES})
 
-add_executable(xzbuf-test src/test.cpp)
-target_link_libraries(xzbuf-test xzbuf)
+add_executable(shrinkwrap-test src/test.cpp)
+target_link_libraries(shrinkwrap-test shrinkwrap)
 
-add_test(xz_seek_test xzbuf-test xzseek)
-add_test(xz_iterator_test xzbuf-test xziter)
-add_test(bgz_seek_test xzbuf-test bgzseek)
-add_test(bgz_iterator_test xzbuf-test bgziter)
+add_test(xz_seek_test shrinkwrap-test xzseek)
+add_test(xz_iterator_test shrinkwrap-test xziter)
+add_test(gz_iterator_test shrinkwrap-test gziter)
+add_test(bgz_seek_test shrinkwrap-test bgzseek)
+add_test(bgz_iterator_test shrinkwrap-test bgziter)
 
 install(DIRECTORY include/shrinkwrap DESTINATION include)
-install(TARGETS xzbuf EXPORT ${PROJECT_NAME}-config
+install(TARGETS shrinkwrap EXPORT ${PROJECT_NAME}-config
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib)
 

@@ -112,7 +112,7 @@ namespace shrinkwrap
       if (gptr() < egptr()) // buffer not exhausted
         return traits_type::to_int_type(*gptr());
 
-      while (gptr() >= egptr() && zlib_res_ == LZMA_OK)
+      while (gptr() >= egptr() && zlib_res_ == Z_OK)
       {
         zstrm_.next_out = decompressed_buffer_.data();
         zstrm_.avail_out = decompressed_buffer_.size();
@@ -253,6 +253,165 @@ namespace shrinkwrap
 
 
 
+  class ogzbuf : public std::streambuf
+  {
+  public:
+    ogzbuf(const std::string& file_path)
+      :
+      zstrm_({0}),
+      fp_(fopen(file_path.c_str(), "wb")),
+      compressed_buffer_(default_block_size),
+      decompressed_buffer_(default_block_size)
+    {
+      if (!fp_)
+      {
+        char* end = ((char*) decompressed_buffer_.data()) + decompressed_buffer_.size();
+        setp(end, end);
+      }
+      else
+      {
+        zlib_res_ = deflateInit2(&zstrm_, Z_DEFAULT_COMPRESSION, Z_DEFLATED, (15 | 16), 8, Z_DEFAULT_STRATEGY); // |16 for GZIP
+        if (zlib_res_ != Z_OK)
+        {
+          // TODO: handle error.
+        }
+
+       zstrm_.next_out = compressed_buffer_.data();
+       zstrm_.avail_out = compressed_buffer_.size();
+
+        char* end = ((char*) decompressed_buffer_.data()) + decompressed_buffer_.size();
+        setp((char*) decompressed_buffer_.data(), end);
+      }
+    }
+
+    ogzbuf(ogzbuf&& src)
+      :
+      std::streambuf(std::move(src))
+    {
+      this->move(std::move(src));
+    }
+
+    ogzbuf& operator=(ogzbuf&& src)
+    {
+      if (&src != this)
+      {
+        std::streambuf::operator=(std::move(src));
+        this->close();
+        this->move(std::move(src));
+      }
+
+      return *this;
+    }
+
+    virtual ~ogzbuf()
+    {
+      this->close();
+    }
+
+  private:
+    void move(ogzbuf&& src)
+    {
+      compressed_buffer_ = std::move(src.compressed_buffer_);
+      decompressed_buffer_ = std::move(src.decompressed_buffer_);
+      zstrm_ = src.zstrm_;
+      fp_ = src.fp_;
+      src.fp_ = nullptr;
+      zlib_res_ = src.zlib_res_;
+    }
+
+    void close()
+    {
+      if (fp_)
+      {
+        sync();
+        int res = deflateEnd(&zstrm_);
+        if (zlib_res_ == Z_OK)
+          zlib_res_ = res;
+        fclose(fp_);
+        fp_ = nullptr;
+      }
+    }
+  protected:
+    virtual int overflow(int c)
+    {
+      if (!fp_)
+        return traits_type::eof();
+
+      if ((epptr() - pptr()) > 0)
+      {
+        assert(!"Put buffer not empty, this should never happen");
+        this->sputc(static_cast<char>(0xFF & c));
+      }
+      else
+      {
+        zstrm_.next_in = decompressed_buffer_.data();
+        zstrm_.avail_in = decompressed_buffer_.size();
+        while (zlib_res_ == Z_OK && zstrm_.avail_in > 0)
+        {
+          zlib_res_ = deflate(&zstrm_, Z_NO_FLUSH);
+
+          if (!fwrite(compressed_buffer_.data(), compressed_buffer_.size() - zstrm_.avail_out, 1, fp_))
+          {
+            // TODO: handle error.
+            return traits_type::eof();
+          }
+          zstrm_.next_out = compressed_buffer_.data();
+          zstrm_.avail_out = compressed_buffer_.size();
+        }
+
+        if (zlib_res_ == Z_STREAM_END)
+          zlib_res_ = deflateReset(&zstrm_);
+
+        assert(zstrm_.avail_in == 0);
+        decompressed_buffer_[0] = reinterpret_cast<unsigned char&>(c);
+        setp((char*) decompressed_buffer_.data() + 1, (char*) decompressed_buffer_.data() + decompressed_buffer_.size());
+      }
+
+      return (zlib_res_ == Z_OK ? traits_type::to_int_type(c) : traits_type::eof());
+    }
+
+    virtual int sync()
+    {
+      if (!fp_)
+        return -1;
+
+      zstrm_.next_in = decompressed_buffer_.data();
+      zstrm_.avail_in = decompressed_buffer_.size() - (epptr() - pptr());
+      if (zstrm_.avail_in)
+      {
+        while (zlib_res_ == Z_OK && zstrm_.avail_in > 0)
+        {
+          zlib_res_ = deflate(&zstrm_, Z_SYNC_FLUSH);
+
+          if (!fwrite(compressed_buffer_.data(), compressed_buffer_.size() - zstrm_.avail_out, 1, fp_))
+          {
+            // TODO: handle error.
+            return -1;
+          }
+          zstrm_.next_out = compressed_buffer_.data();
+          zstrm_.avail_out = compressed_buffer_.size();
+
+        }
+
+        if (zlib_res_ != Z_OK)
+          return -1;
+
+        assert(zstrm_.avail_in == 0);
+        setp((char*) decompressed_buffer_.data(), (char*) decompressed_buffer_.data() + decompressed_buffer_.size());
+      }
+
+      return 0;
+    }
+
+  private:
+    static const std::size_t default_block_size = 0xFFFF;
+    std::vector<std::uint8_t> compressed_buffer_;
+    std::vector<std::uint8_t> decompressed_buffer_;
+    z_stream zstrm_;
+    FILE* fp_;
+    int zlib_res_;
+  };
+
   class obgzbuf : public std::streambuf
   {
   public:
@@ -276,8 +435,8 @@ namespace shrinkwrap
           // TODO: handle error.
         }
 
-       zstrm_.next_out = compressed_buffer_.data();
-       zstrm_.avail_out = compressed_buffer_.size();
+        zstrm_.next_out = compressed_buffer_.data();
+        zstrm_.avail_out = compressed_buffer_.size();
 
         char* end = ((char*) decompressed_buffer_.data()) + decompressed_buffer_.size();
         setp((char*) decompressed_buffer_.data(), end);
@@ -346,22 +505,21 @@ namespace shrinkwrap
       {
         zstrm_.next_in = decompressed_buffer_.data();
         zstrm_.avail_in = decompressed_buffer_.size();
-        while (zlib_res_ == Z_OK && zstrm_.avail_in > 0)
+        while (zlib_res_ == Z_OK)
         {
           zlib_res_ = deflate(&zstrm_, Z_FINISH);
-          if (zstrm_.avail_out == 0 || zlib_res_ == Z_STREAM_END)
+
+          if (!fwrite(compressed_buffer_.data(), compressed_buffer_.size() - zstrm_.avail_out, 1, fp_))
           {
-            if (!fwrite(compressed_buffer_.data(), compressed_buffer_.size() - zstrm_.avail_out, 1, fp_))
-            {
-              // TODO: handle error.
-              return traits_type::eof();
-            }
-            zstrm_.next_out = compressed_buffer_.data();
-            zstrm_.avail_out = compressed_buffer_.size();
+            // TODO: handle error.
+            return traits_type::eof();
           }
+          zstrm_.next_out = compressed_buffer_.data();
+          zstrm_.avail_out = compressed_buffer_.size();
+
         }
 
-        if (zlib_res_ == LZMA_STREAM_END)
+        if (zlib_res_ == Z_STREAM_END)
           zlib_res_ = deflateReset(&zstrm_);
 
         assert(zstrm_.avail_in == 0);
@@ -369,7 +527,7 @@ namespace shrinkwrap
         setp((char*) decompressed_buffer_.data() + 1, (char*) decompressed_buffer_.data() + decompressed_buffer_.size());
       }
 
-      return (zlib_res_ == LZMA_OK ? traits_type::to_int_type(c) : traits_type::eof());
+      return (zlib_res_ == Z_OK ? traits_type::to_int_type(c) : traits_type::eof());
     }
 
     virtual int sync()
@@ -384,22 +542,21 @@ namespace shrinkwrap
         while (zlib_res_ == Z_OK)
         {
           zlib_res_ = deflate(&zstrm_, Z_FINISH);
-          if (zstrm_.avail_out == 0 || (zlib_res_ == Z_STREAM_END && compressed_buffer_.size() != zstrm_.avail_out))
+
+          if (!fwrite(compressed_buffer_.data(), compressed_buffer_.size() - zstrm_.avail_out, 1, fp_))
           {
-            if (!fwrite(compressed_buffer_.data(), compressed_buffer_.size() - zstrm_.avail_out, 1, fp_))
-            {
-              // TODO: handle error.
-              return -1;
-            }
-            zstrm_.next_out = compressed_buffer_.data();
-            zstrm_.avail_out = compressed_buffer_.size();
+            // TODO: handle error.
+            return -1;
           }
+          zstrm_.next_out = compressed_buffer_.data();
+          zstrm_.avail_out = compressed_buffer_.size();
+
         }
 
-        if (zlib_res_ == LZMA_STREAM_END)
+        if (zlib_res_ == Z_STREAM_END)
           zlib_res_ = deflateReset(&zstrm_);
 
-        if (zlib_res_ != LZMA_OK)
+        if (zlib_res_ != Z_OK)
           return -1;
 
         assert(zstrm_.avail_in == 0);
@@ -478,6 +635,37 @@ namespace shrinkwrap
 
   private:
     ibgzbuf sbuf_;
+  };
+
+  class ogzstream : public std::ostream
+  {
+  public:
+    ogzstream(const std::string& file_path)
+      :
+      std::ostream(&sbuf_),
+      sbuf_(file_path)
+    {
+    }
+
+    ogzstream(ogzstream&& src)
+      :
+      std::ostream(&sbuf_),
+      sbuf_(std::move(src.sbuf_))
+    {
+    }
+
+    ogzstream& operator=(ogzstream&& src)
+    {
+      if (&src != this)
+      {
+        std::ostream::operator=(std::move(src));
+        sbuf_ = std::move(src.sbuf_);
+      }
+      return *this;
+    }
+
+  private:
+    ogzbuf sbuf_;
   };
 
   class obgzstream : public std::ostream
