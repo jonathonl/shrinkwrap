@@ -425,8 +425,7 @@ namespace shrinkwrap
       }
       else
       {
-        //zlib_res_ = deflateInit2(&zstrm_, Z_DEFAULT_COMPRESSION, Z_DEFLATED, (15 | 16), 8, Z_DEFAULT_STRATEGY); // |16 for GZIP
-        zlib_res_ = deflateInit2(&zstrm_, Z_DEFAULT_COMPRESSION, Z_DEFLATED, -15, 8, Z_DEFAULT_STRATEGY); // -15 to exclude header and footer.
+        zlib_res_ = deflateInit2(&zstrm_, Z_DEFAULT_COMPRESSION, Z_DEFLATED, (15 | 16), 8, Z_DEFAULT_STRATEGY); // |16 for GZIP
         if (zlib_res_ != Z_OK)
         {
           // TODO: handle error.
@@ -487,27 +486,6 @@ namespace shrinkwrap
         fp_ = nullptr;
       }
     }
-
-    static std::uint16_t host_to_le16(std::uint16_t val)
-    {
-      std::uint16_t ret;
-      std::uint8_t* ptr = (std::uint8_t*)(&ret);
-      ptr[0] = val;
-      ptr[1] = val >> 8;
-      return ret;
-    }
-
-    static std::uint32_t host_to_le32(uint32_t val)
-    {
-      std::uint32_t ret;
-      std::uint8_t* ptr = (std::uint8_t*)(&ret);
-      ptr[0] = val;
-      ptr[1] = val >> 8;
-      ptr[2] = val >> 16;
-      ptr[3] = val >> 24;
-      return ret;
-    }
-
   protected:
     virtual int overflow(int c)
     {
@@ -553,79 +531,39 @@ namespace shrinkwrap
       if (!fp_)
         return -1;
 
-//      zstrm_.next_in = decompressed_buffer_.data();
-//      zstrm_.avail_in = static_cast<std::uint32_t>(decompressed_buffer_.size() - (epptr() - pptr()));
-//      if (zstrm_.avail_in)
-//      {
-//        while (zlib_res_ == Z_OK)
-//        {
-//          zlib_res_ = deflate(&zstrm_, Z_FINISH);
-//
-//          if (!fwrite(compressed_buffer_.data(), compressed_buffer_.size() - zstrm_.avail_out, 1, fp_))
-//          {
-//            // TODO: handle error.
-//            return -1;
-//          }
-//          zstrm_.next_out = compressed_buffer_.data();
-//          zstrm_.avail_out = static_cast<std::uint32_t>(compressed_buffer_.size());
-//
-//        }
-//
-//        if (zlib_res_ == Z_STREAM_END)
-//          zlib_res_ = deflateReset(&zstrm_);
-//
-//        if (zlib_res_ != Z_OK)
-//          return -1;
-//
-//        assert(zstrm_.avail_in == 0);
-//        setp((char*) decompressed_buffer_.data(), (char*) decompressed_buffer_.data() + decompressed_buffer_.size());
-//      }
+      zstrm_.next_in = decompressed_buffer_.data();
+      zstrm_.avail_in = static_cast<std::uint32_t>(decompressed_buffer_.size() - (epptr() - pptr()));
+      if (zstrm_.avail_in)
+      {
+        while (zlib_res_ == Z_OK)
+        {
+          zlib_res_ = deflate(&zstrm_, Z_FINISH);
 
-      std::uint32_t uncompressed_size = static_cast<std::uint32_t>(decompressed_buffer_.size() - (epptr() - pptr()));
-      zstrm_.next_in  = decompressed_buffer_.data();
-      zstrm_.avail_in = uncompressed_size;
-      zstrm_.next_out = compressed_buffer_.data() + gzip_header_size;
-      zstrm_.avail_out = static_cast<std::uint32_t>(compressed_buffer_.size() - gzip_header_size - gzip_footer_size);
+          if (!fwrite(compressed_buffer_.data(), compressed_buffer_.size() - zstrm_.avail_out, 1, fp_))
+          {
+            // TODO: handle error.
+            return -1;
+          }
+          zstrm_.next_out = compressed_buffer_.data();
+          zstrm_.avail_out = static_cast<std::uint32_t>(compressed_buffer_.size());
 
-      zlib_res_ = deflateReset(&zstrm_);
+        }
 
-      zlib_res_ = deflate(&zstrm_, Z_FINISH);
+        if (zlib_res_ == Z_STREAM_END)
+          zlib_res_ = deflateReset(&zstrm_);
 
-      if (zlib_res_ == Z_OK)
-        zlib_res_ = Z_BUF_ERROR;
-
-      if (zlib_res_ == Z_STREAM_END && zstrm_.avail_in == 0)
-        zlib_res_ = Z_OK;
-
-      if (zlib_res_ != Z_OK)
+        if (zlib_res_ != Z_OK)
           return -1;
 
-
-
-      std::uint16_t compressed_size = static_cast<std::uint16_t>(zstrm_.total_out + gzip_header_size + gzip_footer_size);
-      std::uint16_t compressed_size_le = (compressed_size - 1us);
-
-      // write the header
-      std::memcpy(compressed_buffer_.data(), header_data, gzip_header_size); // the last two bytes are a place holder for the length of the block
-      std::memcpy(compressed_buffer_.data() + (gzip_header_size - 2), &compressed_size_le, 2); // write the compressed length; -1 to fit 2 bytes
-
-      // write the footer
-      std::uint32_t crc = crc32(crc32(0L, NULL, 0L), decompressed_buffer_.data(), uncompressed_size);
-      std::uint32_t crc_le = host_to_le32(crc);
-      std::uint32_t uncompressed_size_le = host_to_le32(uncompressed_size);
-
-      std::memcpy(&compressed_buffer_[compressed_size - 8], &crc_le, 4);
-      std::memcpy(&compressed_buffer_[compressed_size - 4], &uncompressed_size_le, 4);
+        assert(zstrm_.avail_in == 0);
+        setp((char*) decompressed_buffer_.data(), (char*) decompressed_buffer_.data() + decompressed_buffer_.size());
+      }
 
       return 0;
     }
 
   private:
     static const std::size_t default_block_size = 0xFFFF;
-    static const std::size_t gzip_header_size = 18;
-    static const std::size_t gzip_footer_size = 8;
-    static const uint8_t header_data[19] = "\037\213\010\4\0\0\0\0\0\377\6\0\102\103\2\0\0\0";
-
     std::vector<std::uint8_t> compressed_buffer_;
     std::vector<std::uint8_t> decompressed_buffer_;
     z_stream zstrm_;
