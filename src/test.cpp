@@ -243,7 +243,7 @@ int main(int argc, char* argv[])
     else if (sub_command == "gziter")
       ret = !(iterator_test<sw::igzstream, sw::ogzstream>("test_iterator_file.txt.gz")() && iterator_test<sw::igzstream, sw::ogzstream>("test_iterator_file_512.txt.gz", 512)() && iterator_test<sw::igzstream, sw::ogzstream>("test_iterator_file_1024.txt.gz", 1024)());
     else if (sub_command == "bgzseek")
-      ret = !(virtual_offset_seek_test<sw::ibgzstream, sw::obgzstream>("test_seek_file.txt.bgzf", 512)());
+      ret = !(virtual_offset_seek_test<sw::ibgzstream, sw::obgzstream>("test_seek_file.txt.bgzf")() && virtual_offset_seek_test<sw::ibgzstream, sw::obgzstream>("test_seek_file_512.txt.bgzf", 512)() && virtual_offset_seek_test<sw::ibgzstream, sw::obgzstream>("test_seek_file_1024.txt.bgzf", 1024)());
     else if (sub_command == "bgziter")
       ret = !(iterator_test<sw::ibgzstream, sw::obgzstream>("test_iterator_file.txt.bgzf")() && iterator_test<sw::ibgzstream, sw::obgzstream>("test_iterator_file_512.txt.bgzf", 512)() && iterator_test<sw::ibgzstream, sw::obgzstream>("test_iterator_file_1024.txt.bgzf", 1024)());
   }
