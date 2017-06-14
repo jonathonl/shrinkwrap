@@ -1,6 +1,7 @@
 
-#include "shrinkwrap/xz.hpp"
-#include "shrinkwrap/gz.hpp"
+#include "shrinkwrap/istream.hpp"
+
+
 #include <fstream>
 
 #include <iostream>
@@ -11,7 +12,7 @@
 #include <iterator>
 #include <sstream>
 #include <limits>
-#include <shrinkwrap/gz.hpp>
+
 
 namespace sw = shrinkwrap;
 
@@ -236,7 +237,9 @@ int main(int argc, char* argv[])
   if (argc > 1)
   {
     std::string sub_command = argv[1];
-    if (sub_command == "xzseek")
+    if (sub_command == "generic_iter")
+      ret = !(iterator_test<sw::istream, sw::xz::ostream>("test_iterator_file.txt.xz")() && iterator_test<sw::istream, sw::xz::ostream>("test_iterator_file_512.txt.xz", 512)() && iterator_test<sw::istream, sw::xz::ostream>("test_iterator_file_1024.txt.xz", 1024)());
+    else if (sub_command == "xzseek")
       ret = !(seek_test<sw::xz::istream, sw::xz::ostream>("test_seek_file.txt.xz")());
     else if (sub_command == "xziter")
       ret = !(iterator_test<sw::xz::istream, sw::xz::ostream>("test_iterator_file.txt.xz")() && iterator_test<sw::xz::istream, sw::xz::ostream>("test_iterator_file_512.txt.xz", 512)() && iterator_test<sw::xz::istream, sw::xz::ostream>("test_iterator_file_1024.txt.xz", 1024)());

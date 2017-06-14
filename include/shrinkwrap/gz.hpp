@@ -18,7 +18,7 @@ namespace shrinkwrap
     class ibuf : public std::streambuf
     {
     public:
-      ibuf(const std::string& file_path)
+      ibuf(FILE* fp)
         :
         zstrm_({0}),
         compressed_buffer_(default_block_size),
@@ -26,7 +26,7 @@ namespace shrinkwrap
         discard_amount_(0),
         current_block_position_(0),
         uncompressed_block_offset_(0),
-        fp_(fopen(file_path.c_str(), "rb")),
+        fp_(fp),
         put_back_size_(0),
         at_block_boundary_(false)
       {
@@ -41,6 +41,8 @@ namespace shrinkwrap
         char* end = ((char*) decompressed_buffer_.data()) + decompressed_buffer_.size();
         setg(end, end, end);
       }
+
+      ibuf(const std::string& file_path) : ibuf(fopen(file_path.c_str(), "rb")) {}
 
       ibuf(ibuf&& src)
         :
@@ -187,10 +189,10 @@ namespace shrinkwrap
     class obuf : public std::streambuf
     {
     public:
-      obuf(const std::string& file_path)
+      obuf(FILE* fp)
         :
         zstrm_({0}),
-        fp_(fopen(file_path.c_str(), "wb")),
+        fp_(fp),
         compressed_buffer_(default_block_size),
         decompressed_buffer_(default_block_size)
       {
@@ -214,6 +216,8 @@ namespace shrinkwrap
           setp((char*) decompressed_buffer_.data(), end);
         }
       }
+
+      obuf(const std::string& file_path) : obuf(fopen(file_path.c_str(), "wb")) {}
 
       obuf(obuf&& src)
         :
@@ -477,10 +481,10 @@ namespace shrinkwrap
     class obuf : public std::streambuf
     {
     public:
-      obuf(const std::string& file_path)
+      obuf(FILE* fp)
         :
         zstrm_({0}),
-        fp_(fopen(file_path.c_str(), "wb")),
+        fp_(fp),
         compressed_buffer_(default_block_size),
         decompressed_buffer_(default_block_size)
       {
@@ -504,6 +508,8 @@ namespace shrinkwrap
           setp((char*) decompressed_buffer_.data(), end);
         }
       }
+
+      obuf(const std::string& file_path) : obuf(fopen(file_path.c_str(), "wb")) {}
 
       obuf(obuf&& src)
         :
