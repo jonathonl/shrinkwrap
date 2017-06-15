@@ -237,18 +237,40 @@ int main(int argc, char* argv[])
   if (argc > 1)
   {
     std::string sub_command = argv[1];
-    if (sub_command == "generic_iter")
-      ret = !(iterator_test<sw::istream, sw::xz::ostream>("test_iterator_file.txt.xz")() && iterator_test<sw::istream, sw::xz::ostream>("test_iterator_file_512.txt.xz", 512)() && iterator_test<sw::istream, sw::xz::ostream>("test_iterator_file_1024.txt.xz", 1024)());
+    if (sub_command == "generic-iter")
+      ret = !(iterator_test<sw::istream, sw::xz::ostream>("test_generic_iterator_file.txt.xz")()
+              && iterator_test<sw::istream, sw::xz::ostream>("test_generic_iterator_file_512.txt.xz", 512)()
+              && iterator_test<sw::istream, sw::xz::ostream>("test_generic_iterator_file_1024.txt.xz", 1024)()
+              && iterator_test<sw::istream, sw::gz::ostream>("test_generic_iterator_file.txt.gz")()
+              && iterator_test<sw::istream, sw::gz::ostream>("test_generic_iterator_file_512.txt.gz", 512)()
+              && iterator_test<sw::istream, sw::gz::ostream>("test_generic_iterator_file_1024.txt.gz", 1024)());
+    else if (sub_command == "generic-seek")
+      ret = !(seek_test<sw::istream, sw::xz::ostream>("test_generic_seek_file.txt.xz")()
+              && seek_test<sw::istream, sw::xz::ostream>("test_generic_seek_file_512.txt.xz", 512)()
+              && seek_test<sw::istream, sw::xz::ostream>("test_generic_seek_file_1024.txt.xz", 1024)()
+              && virtual_offset_seek_test<sw::istream, sw::bgz::ostream>("test_generic_seek_file.txt.bgzf")()
+              && virtual_offset_seek_test<sw::istream, sw::bgz::ostream>("test_generic_seek_file_512.txt.bgzf", 512)()
+              && virtual_offset_seek_test<sw::istream, sw::bgz::ostream>("test_generic_seek_file_1024.txt.bgzf", 1024)());
     else if (sub_command == "xzseek")
-      ret = !(seek_test<sw::xz::istream, sw::xz::ostream>("test_seek_file.txt.xz")());
+      ret = !(seek_test<sw::xz::istream, sw::xz::ostream>("test_seek_file.txt.xz")()
+              && seek_test<sw::xz::istream, sw::xz::ostream>("test_seek_file_512.txt.xz", 512)()
+              && seek_test<sw::xz::istream, sw::xz::ostream>("test_seek_file_1024.txt.xz", 1024)());
     else if (sub_command == "xziter")
-      ret = !(iterator_test<sw::xz::istream, sw::xz::ostream>("test_iterator_file.txt.xz")() && iterator_test<sw::xz::istream, sw::xz::ostream>("test_iterator_file_512.txt.xz", 512)() && iterator_test<sw::xz::istream, sw::xz::ostream>("test_iterator_file_1024.txt.xz", 1024)());
+      ret = !(iterator_test<sw::xz::istream, sw::xz::ostream>("test_iterator_file.txt.xz")()
+              && iterator_test<sw::xz::istream, sw::xz::ostream>("test_iterator_file_512.txt.xz", 512)()
+              && iterator_test<sw::xz::istream, sw::xz::ostream>("test_iterator_file_1024.txt.xz", 1024)());
     else if (sub_command == "gziter")
-      ret = !(iterator_test<sw::gz::istream, sw::gz::ostream>("test_iterator_file.txt.gz")() && iterator_test<sw::gz::istream, sw::gz::ostream>("test_iterator_file_512.txt.gz", 512)() && iterator_test<sw::gz::istream, sw::gz::ostream>("test_iterator_file_1024.txt.gz", 1024)());
+      ret = !(iterator_test<sw::gz::istream, sw::gz::ostream>("test_iterator_file.txt.gz")()
+              && iterator_test<sw::gz::istream, sw::gz::ostream>("test_iterator_file_512.txt.gz", 512)()
+              && iterator_test<sw::gz::istream, sw::gz::ostream>("test_iterator_file_1024.txt.gz", 1024)());
     else if (sub_command == "bgzseek")
-      ret = !(virtual_offset_seek_test<sw::bgz::istream, sw::bgz::ostream>("test_seek_file.txt.bgzf")() && virtual_offset_seek_test<sw::bgz::istream, sw::bgz::ostream>("test_seek_file_512.txt.bgzf", 512)() && virtual_offset_seek_test<sw::bgz::istream, sw::bgz::ostream>("test_seek_file_1024.txt.bgzf", 1024)());
+      ret = !(virtual_offset_seek_test<sw::bgz::istream, sw::bgz::ostream>("test_seek_file.txt.bgzf")()
+              && virtual_offset_seek_test<sw::bgz::istream, sw::bgz::ostream>("test_seek_file_512.txt.bgzf", 512)()
+              && virtual_offset_seek_test<sw::bgz::istream, sw::bgz::ostream>("test_seek_file_1024.txt.bgzf", 1024)());
     else if (sub_command == "bgziter")
-      ret = !(iterator_test<sw::bgz::istream, sw::bgz::ostream>("test_iterator_file.txt.bgzf")() && iterator_test<sw::bgz::istream, sw::bgz::ostream>("test_iterator_file_512.txt.bgzf", 512)() && iterator_test<sw::bgz::istream, sw::bgz::ostream>("test_iterator_file_1024.txt.bgzf", 1024)());
+      ret = !(iterator_test<sw::bgz::istream, sw::bgz::ostream>("test_iterator_file.txt.bgzf")()
+              && iterator_test<sw::bgz::istream, sw::bgz::ostream>("test_iterator_file_512.txt.bgzf", 512)()
+              && iterator_test<sw::bgz::istream, sw::bgz::ostream>("test_iterator_file_1024.txt.bgzf", 1024)());
   }
 
   return ret;

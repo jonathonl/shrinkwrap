@@ -40,6 +40,8 @@ add_test(xz_iterator_test shrinkwrap-test xziter)
 add_test(gz_iterator_test shrinkwrap-test gziter)
 add_test(bgz_seek_test shrinkwrap-test bgzseek)
 add_test(bgz_iterator_test shrinkwrap-test bgziter)
+add_test(generic_iterator_test shrinkwrap-test generic-iter)
+add_test(generic_seek_test shrinkwrap-test generic-seek)
 
 install(DIRECTORY include/shrinkwrap DESTINATION include)
 install(TARGETS shrinkwrap EXPORT ${PROJECT_NAME}-config

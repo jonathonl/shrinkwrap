@@ -33,14 +33,15 @@ namespace shrinkwrap
       switch (char(first_byte))
       {
         case '\x1F':
-          sbuf_ = detail::make_unique<::shrinkwrap::gz::ibuf>(fp);
+          sbuf_ = detail::make_unique<::shrinkwrap::bgz::ibuf>(fp);
           break;
         case char('\xFD'):
           sbuf_ = detail::make_unique<::shrinkwrap::xz::ibuf>(fp);
           break;
-        //case '\x28': // zstd
+        case '\x28':
+          throw std::runtime_error("zstd files not yet supported.");
         default:
-          throw std::runtime_error("raw file now yet supported.");
+          throw std::runtime_error("raw files not yet supported.");
 
       }
 
