@@ -112,7 +112,7 @@ namespace shrinkwrap
         if (gptr() < egptr()) // buffer not exhausted
           return traits_type::to_int_type(*gptr());
 
-        while (gptr() >= egptr() && zlib_res_ == Z_OK)
+        if (zlib_res_ == Z_OK || zlib_res_ == Z_STREAM_END)
         {
           zstrm_.next_out = decompressed_buffer_.data();
           zstrm_.avail_out = static_cast<std::uint32_t>(decompressed_buffer_.size());
@@ -125,24 +125,15 @@ namespace shrinkwrap
 
 
           //assert(zstrm_.avail_in > 0);
-          if (zstrm_.total_in == 0)
+          if (zlib_res_ == Z_STREAM_END && zstrm_.avail_in > 0)
           {
-            current_block_position_ = static_cast<std::uint64_t>((ftell(fp_) - zstrm_.avail_in));
+            zlib_res_ = inflateReset(&zstrm_);
             uncompressed_block_offset_ = 0;
+            current_block_position_ = std::size_t(ftell(fp_)) - zstrm_.avail_in;
           }
 
-          int r = inflate(&zstrm_, Z_NO_FLUSH);
-          if (r == Z_STREAM_END)
-          {
-            // End of block.
-            if (zstrm_.avail_in == 0 && !feof(fp_))
-              replenish_compressed_buffer();
+          zlib_res_ = inflate(&zstrm_, Z_NO_FLUSH);
 
-            if (zstrm_.avail_in > 0)
-              r = inflateReset(&zstrm_);
-          }
-
-          zlib_res_ = r;
 
           char* start = ((char*) decompressed_buffer_.data());
           setg(start, start, start + (decompressed_buffer_.size() - zstrm_.avail_out));
@@ -177,7 +168,7 @@ namespace shrinkwrap
       std::size_t put_back_size_;
       bool at_block_boundary_;
     protected:
-      static const std::size_t default_block_size = 0xFFFF;
+      static const std::size_t default_block_size = 512; //64 * 1024;
       int zlib_res_;
       z_stream zstrm_;
       std::uint16_t discard_amount_;
@@ -339,7 +330,7 @@ namespace shrinkwrap
       }
 
     private:
-      static const std::size_t default_block_size = 0xFFFF;
+      static const std::size_t default_block_size = 512; //64 * 1024;
       std::vector<std::uint8_t> compressed_buffer_;
       std::vector<std::uint8_t> decompressed_buffer_;
       z_stream zstrm_;
@@ -444,10 +435,20 @@ namespace shrinkwrap
       {
         if (off == 0 && way == std::ios::cur)
         {
-          std::uint64_t compressed_offset = current_block_position_;
-          std::uint16_t uncompressed_offset = (std::uint16_t(uncompressed_block_offset_) - std::uint16_t(egptr() - gptr())) + discard_amount_;
-          std::uint64_t virtual_offset = ((compressed_offset << 16) | uncompressed_offset);
-          return pos_type(off_type(virtual_offset));
+          if (egptr() - gptr() == 0 && zlib_res_ == Z_STREAM_END)
+          {
+            std::uint64_t compressed_offset = std::size_t(ftell(fp_)) - zstrm_.avail_in;
+            std::uint16_t uncompressed_offset = 0;
+            std::uint64_t virtual_offset = ((compressed_offset << 16) | uncompressed_offset);
+            return pos_type(off_type(virtual_offset));
+          }
+          else
+          {
+            std::uint64_t compressed_offset = current_block_position_;
+            std::uint16_t uncompressed_offset = (std::uint16_t(uncompressed_block_offset_) - std::uint16_t(egptr() - gptr())) + discard_amount_;
+            std::uint64_t virtual_offset = ((compressed_offset << 16) | uncompressed_offset);
+            return pos_type(off_type(virtual_offset));
+          }
         }
         return pos_type(off_type(-1));
       }
@@ -635,7 +636,7 @@ namespace shrinkwrap
       }
 
     private:
-      static const std::size_t default_block_size = 0xFFFF;
+      static const std::size_t default_block_size = 512; //64 * 1024;
       std::vector<std::uint8_t> compressed_buffer_;
       std::vector<std::uint8_t> decompressed_buffer_;
       z_stream zstrm_;
