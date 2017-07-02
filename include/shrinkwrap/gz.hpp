@@ -168,7 +168,7 @@ namespace shrinkwrap
       std::size_t put_back_size_;
       bool at_block_boundary_;
     protected:
-      static const std::size_t default_block_size = 512; //64 * 1024;
+      static const std::size_t default_block_size = 64 * 1024;
       int zlib_res_;
       z_stream zstrm_;
       std::uint16_t discard_amount_;
@@ -330,7 +330,7 @@ namespace shrinkwrap
       }
 
     private:
-      static const std::size_t default_block_size = 512; //64 * 1024;
+      static const std::size_t default_block_size = 64 * 1024;
       std::vector<std::uint8_t> compressed_buffer_;
       std::vector<std::uint8_t> decompressed_buffer_;
       z_stream zstrm_;
@@ -636,7 +636,7 @@ namespace shrinkwrap
       }
 
     private:
-      static const std::size_t default_block_size = 512; //64 * 1024;
+      static const std::size_t default_block_size = 64 * 1024;
       std::vector<std::uint8_t> compressed_buffer_;
       std::vector<std::uint8_t> decompressed_buffer_;
       z_stream zstrm_;

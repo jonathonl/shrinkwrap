@@ -3,6 +3,7 @@
 
 #include "xz.hpp"
 #include "gz.hpp"
+#include "zstd.hpp"
 
 #include <streambuf>
 #include <memory>
@@ -39,7 +40,8 @@ namespace shrinkwrap
           sbuf_ = detail::make_unique<::shrinkwrap::xz::ibuf>(fp);
           break;
         case '\x28':
-          throw std::runtime_error("zstd files not yet supported.");
+          sbuf_ = detail::make_unique<::shrinkwrap::zstd::ibuf>(fp);
+          break;
         default:
           throw std::runtime_error("raw files not yet supported.");
 

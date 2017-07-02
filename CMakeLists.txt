@@ -21,25 +21,38 @@ find_library(LIBLZMA_LIBRARIES
 find_library(ZLIB_LIBRARIES
              NAMES ${ZLIB_LIB_NAME})
 
+#ZSTD can only likn statically since experimental functions are being used.
+find_library(ZSTD_LIBRARIES
+             NAMES ${CMAKE_STATIC_LIBRARY_PREFIX}zstd${CMAKE_STATIC_LIBRARY_SUFFIX})
+
 if (NOT LIBLZMA_LIBRARIES)
     message(FATAL_ERROR "lzma library not found")
 endif()
 
+if (NOT ZLIB_LIBRARIES)
+    message(FATAL_ERROR "zlib library not found")
+endif()
+
+if (NOT ZSTD_LIBRARIES)
+    message(FATAL_ERROR "zstd library not found")
+endif()
+
 add_library(shrinkwrap INTERFACE)
-target_sources(shrinkwrap INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/shrinkwrap/xz.hpp;${CMAKE_CURRENT_SOURCE_DIR}/include/shrinkwrap/gz.hpp;${CMAKE_CURRENT_SOURCE_DIR}/include/shrinkwrap/istream.hpp>)
+target_sources(shrinkwrap INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/shrinkwrap/xz.hpp;${CMAKE_CURRENT_SOURCE_DIR}/include/shrinkwrap/gz.hpp;${CMAKE_CURRENT_SOURCE_DIR}/include/shrinkwrap/istream.hpp;${CMAKE_CURRENT_SOURCE_DIR}/include/shrinkwrap/istream.hpp>)
 target_include_directories(shrinkwrap INTERFACE
                            $<INSTALL_INTERFACE:include>
                            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
-target_link_libraries(shrinkwrap INTERFACE ${LIBLZMA_LIBRARIES} ${ZLIB_LIBRARIES})
+target_link_libraries(shrinkwrap INTERFACE ${LIBLZMA_LIBRARIES} ${ZLIB_LIBRARIES} ${ZSTD_LIBRARIES})
 
 add_executable(shrinkwrap-test src/test.cpp)
 target_link_libraries(shrinkwrap-test shrinkwrap)
 
-add_test(xz_seek_test shrinkwrap-test xzseek)
-add_test(xz_iterator_test shrinkwrap-test xziter)
-add_test(gz_iterator_test shrinkwrap-test gziter)
-add_test(bgz_seek_test shrinkwrap-test bgzseek)
-add_test(bgz_iterator_test shrinkwrap-test bgziter)
+add_test(xz_seek_test shrinkwrap-test xz-seek)
+add_test(xz_iterator_test shrinkwrap-test xz-iter)
+add_test(gz_iterator_test shrinkwrap-test gz-iter)
+add_test(bgz_seek_test shrinkwrap-test bgz-seek)
+add_test(bgz_iterator_test shrinkwrap-test bgz-iter)
+add_test(zstd_iterator_test shrinkwrap-test zstd-iter)
 add_test(generic_iterator_test shrinkwrap-test generic-iter)
 add_test(generic_seek_test shrinkwrap-test generic-seek)
 
