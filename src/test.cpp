@@ -276,8 +276,8 @@ int main(int argc, char* argv[])
               && iterator_test<sw::bgz::istream, sw::bgz::ostream>("test_iterator_file_1024.txt.bgzf", 1024)());
     else if (sub_command == "zstd-iter")
       ret = !(iterator_test<sw::zstd::istream, sw::zstd::ostream>("test_iterator_file.txt.zst")()
-        && iterator_test<sw::zstd::istream, sw::zstd::ostream>("test_iterator_file_512.txt.zst", 512)()
-        && iterator_test<sw::zstd::istream, sw::zstd::ostream>("test_iterator_file_1024.txt.zst", 1024)());
+              && iterator_test<sw::zstd::istream, sw::zstd::ostream>("test_iterator_file_512.txt.zst", 512)()
+              && iterator_test<sw::zstd::istream, sw::zstd::ostream>("test_iterator_file_1024.txt.zst", 1024)());
   }
 
   return ret;

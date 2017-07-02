@@ -274,9 +274,9 @@ namespace shrinkwrap
           zstrm_.avail_in = static_cast<std::uint32_t>(decompressed_buffer_.size());
           while (zlib_res_ == Z_OK && zstrm_.avail_in > 0)
           {
-            zlib_res_ = deflate(&zstrm_, Z_NO_FLUSH);
+            zlib_res_ = deflate(&zstrm_, Z_SYNC_FLUSH);
 
-            if (!fwrite(compressed_buffer_.data(), compressed_buffer_.size() - zstrm_.avail_out, 1, fp_))
+            if ((compressed_buffer_.size() - zstrm_.avail_out) > 0 && !fwrite(compressed_buffer_.data(), compressed_buffer_.size() - zstrm_.avail_out, 1, fp_))
             {
               // TODO: handle error.
               return traits_type::eof();
@@ -309,7 +309,7 @@ namespace shrinkwrap
           {
             zlib_res_ = deflate(&zstrm_, Z_SYNC_FLUSH);
 
-            if (!fwrite(compressed_buffer_.data(), compressed_buffer_.size() - zstrm_.avail_out, 1, fp_))
+            if ((compressed_buffer_.size() - zstrm_.avail_out) > 0 && !fwrite(compressed_buffer_.data(), compressed_buffer_.size() - zstrm_.avail_out, 1, fp_))
             {
               // TODO: handle error.
               return -1;
