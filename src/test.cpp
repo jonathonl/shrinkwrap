@@ -20,7 +20,7 @@ template <typename InT, typename OutT>
 class test_base
 {
 public:
-  test_base(const std::string& file_path, std::size_t block_size = std::numeric_limits<std::size_t>::max()):
+  test_base(const std::string& file_path, std::size_t block_size = 2048):
     file_(file_path),
     block_size_(block_size)
   {
@@ -230,6 +230,74 @@ private:
   }
 };
 
+template <typename InT, typename OutT>
+class block_seek_test : public test_base<InT, OutT>
+{
+public:
+  using test_base<InT, OutT>::test_base;
+
+  bool operator()()
+  {
+    bool ret = false;
+
+    if ((test_base<InT, OutT>::file_exists(this->file_) && std::remove(this->file_.c_str()) != 0) || !test_base<InT, OutT>::generate_test_file(this->file_, this->block_size_))
+    {
+      std::cerr << "FAILED to generate test file" << std::endl;
+    }
+    else
+    {
+      if (!run(this->file_))
+      {
+        std::cerr << "FAILED seek test." << std::endl;
+      }
+      else
+      {
+        ret = true;
+      }
+    }
+
+    return ret;
+  }
+private:
+  bool run(const std::string& file_path)
+  {
+    std::array<char, 64> buf;
+    std::vector<long> pos_sequence = {0};
+
+    {
+      InT ifs(file_path);
+      while (ifs)
+      {
+        ifs.read(buf.data(), buf.size());
+        long tmp = ifs.tellg();
+        if (tmp >= 0 && tmp != pos_sequence.back())
+          pos_sequence.push_back(tmp);
+      }
+    }
+
+    for (auto pos = pos_sequence.rbegin(); pos != pos_sequence.rend(); ++pos)
+    {
+      std::size_t total_bytes_read = 0;
+      InT ifs(file_path);
+      ifs.seekg(*pos);
+      while (ifs)
+      {
+        ifs.read(buf.data(), buf.size());
+        total_bytes_read += ifs.gcount();
+      }
+
+      std::size_t expected_bytes_to_read = std::distance(pos_sequence.rbegin(), pos) * this->block_size_;
+      if (total_bytes_read != expected_bytes_to_read)
+      {
+        std::cerr << "Seek Failure (pos: " << (*pos) << ")" << std::endl;
+        return false;
+      }
+    }
+
+    return true;
+  }
+};
+
 int main(int argc, char* argv[])
 {
   int ret = -1;
@@ -278,6 +346,10 @@ int main(int argc, char* argv[])
       ret = !(iterator_test<sw::zstd::istream, sw::zstd::ostream>("test_iterator_file.txt.zst")()
               && iterator_test<sw::zstd::istream, sw::zstd::ostream>("test_iterator_file_512.txt.zst", 512)()
               && iterator_test<sw::zstd::istream, sw::zstd::ostream>("test_iterator_file_1024.txt.zst", 1024)());
+    else if (sub_command == "zstd-seek")
+      ret = !(block_seek_test<sw::zstd::istream, sw::zstd::ostream>("test_seek_file.txt.zst")()
+        && block_seek_test<sw::zstd::istream, sw::zstd::ostream>("test_seek_file_512.txt.zst", 512)()
+        && block_seek_test<sw::zstd::istream, sw::zstd::ostream>("test_seek_file_1024.txt.zst", 1024)());
   }
 
   return ret;

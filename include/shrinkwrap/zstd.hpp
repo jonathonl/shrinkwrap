@@ -138,7 +138,41 @@ namespace shrinkwrap
 
       virtual std::streambuf::pos_type seekoff(std::streambuf::off_type off, std::ios_base::seekdir way, std::ios_base::openmode which)
       {
+        if (off == 0 && way == std::ios::cur)
+        {
+          if (egptr() - gptr() == 0 && res_ == 0)
+          {
+            std::uint64_t compressed_offset = std::size_t(ftell(fp_)) - (input_.size - input_.pos);
+            return pos_type(off_type(compressed_offset));
+          }
+          else
+          {
+            std::uint64_t compressed_offset = current_block_position_;
+            return pos_type(off_type(compressed_offset));
+          }
+        }
         return pos_type(off_type(-1));
+      }
+
+      virtual std::streambuf::pos_type seekpos(std::streambuf::pos_type pos, std::ios_base::openmode which)
+      {
+        std::uint64_t compressed_offset = static_cast<std::uint64_t>(pos);
+
+        if (fp_ == 0 || sync())
+          return pos_type(off_type(-1));
+
+        long seek_amount = static_cast<long>(compressed_offset);
+        if (fseek(fp_, seek_amount, SEEK_SET))
+          return pos_type(off_type(-1));
+
+        input_.src = nullptr;
+        input_.pos = 0;
+        input_.size = 0;
+        res_ = 0;
+        char* end = egptr();
+        setg(end, end, end);
+
+        return pos;
       }
 
     private:

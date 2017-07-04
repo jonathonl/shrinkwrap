@@ -53,6 +53,7 @@ add_test(gz_iterator_test shrinkwrap-test gz-iter)
 add_test(bgz_seek_test shrinkwrap-test bgz-seek)
 add_test(bgz_iterator_test shrinkwrap-test bgz-iter)
 add_test(zstd_iterator_test shrinkwrap-test zstd-iter)
+add_test(zstd_seek_test shrinkwrap-test zstd-seek)
 add_test(generic_iterator_test shrinkwrap-test generic-iter)
 add_test(generic_seek_test shrinkwrap-test generic-seek)
 
