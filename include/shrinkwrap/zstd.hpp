@@ -84,11 +84,11 @@ namespace shrinkwrap
         src.strm_ = nullptr;
         compressed_buffer_ = std::move(src.compressed_buffer_);
         decompressed_buffer_ = std::move(src.decompressed_buffer_);
-
         current_block_position_ = src.current_block_position_;
         fp_ = src.fp_;
         src.fp_ = nullptr;
         res_ = src.res_;
+        input_ = src.input_;
       }
 
       void replenish_compressed_buffer()
