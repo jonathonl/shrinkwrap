@@ -409,7 +409,7 @@ namespace shrinkwrap
     {
     public:
       using gz::ibuf::ibuf;
-
+#if !defined(__GNUC__) || defined(__clang__) || __GNUC__ > 4
       ibuf(ibuf&& src)
         :
         gz::ibuf(std::move(src))
@@ -425,6 +425,7 @@ namespace shrinkwrap
 
         return *this;
       }
+#endif
 
       virtual ~ibuf()
       {
@@ -511,7 +512,7 @@ namespace shrinkwrap
       }
 
       obuf(const std::string& file_path) : obuf(fopen(file_path.c_str(), "wb")) {}
-
+#if !defined(__GNUC__) || defined(__clang__) || __GNUC__ > 4
       obuf(obuf&& src)
         :
         std::streambuf(std::move(src))
@@ -530,7 +531,7 @@ namespace shrinkwrap
 
         return *this;
       }
-
+#endif
       virtual ~obuf()
       {
         this->close();

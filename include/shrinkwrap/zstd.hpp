@@ -41,6 +41,7 @@ namespace shrinkwrap
 
       ibuf(const std::string& file_path) : ibuf(fopen(file_path.c_str(), "rb")) {}
 
+#if !defined(__GNUC__) || defined(__clang__) || __GNUC__ > 4
       ibuf(ibuf&& src)
         :
         std::streambuf(std::move(src))
@@ -59,6 +60,7 @@ namespace shrinkwrap
 
         return *this;
       }
+#endif
 
       virtual ~ibuf()
       {
@@ -216,6 +218,7 @@ namespace shrinkwrap
 
       obuf(const std::string& file_path) : obuf(fopen(file_path.c_str(), "wb")) {}
 
+#if !defined(__GNUC__) || defined(__clang__) || __GNUC__ > 4
       obuf(obuf&& src)
         :
         std::streambuf(std::move(src))
@@ -234,6 +237,7 @@ namespace shrinkwrap
 
         return *this;
       }
+#endif
 
       virtual ~obuf()
       {
@@ -355,6 +359,7 @@ namespace shrinkwrap
       {
       }
 
+#if !defined(__GNUC__) || defined(__clang__) || __GNUC__ > 4
       istream(istream&& src)
         :
         std::istream(&sbuf_),
@@ -371,7 +376,7 @@ namespace shrinkwrap
         }
         return *this;
       }
-
+#endif
     private:
       ::shrinkwrap::zstd::ibuf sbuf_;
     };
@@ -388,6 +393,7 @@ namespace shrinkwrap
       {
       }
 
+#if !defined(__GNUC__) || defined(__clang__) || __GNUC__ > 4
       ostream(ostream&& src)
         :
         std::ostream(&sbuf_),
@@ -404,7 +410,7 @@ namespace shrinkwrap
         }
         return *this;
       }
-
+#endif
     private:
       ::shrinkwrap::zstd::obuf sbuf_;
     };

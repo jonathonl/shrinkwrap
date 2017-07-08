@@ -50,6 +50,7 @@ namespace shrinkwrap
       this->rdbuf(sbuf_.get());
     }
 
+#if !defined(__GNUC__) || defined(__clang__) || __GNUC__ > 4
     istream(istream&& src)
       :
       std::istream(src.sbuf_.get()),
@@ -66,7 +67,7 @@ namespace shrinkwrap
       }
       return *this;
     }
-
+#endif
   private:
     std::unique_ptr<std::streambuf> sbuf_;
   };
