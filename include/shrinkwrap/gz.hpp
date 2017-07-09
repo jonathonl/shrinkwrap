@@ -150,14 +150,9 @@ namespace shrinkwrap
         }
 
         if (zlib_res_ != Z_OK && zlib_res_ != Z_STREAM_END)
-        {
           return traits_type::eof();
-        }
         else if (gptr() >= egptr())
-        {
-          assert(zlib_res_ == Z_STREAM_END);
           return traits_type::eof();
-        }
 
         return traits_type::to_int_type(*gptr());
       }
