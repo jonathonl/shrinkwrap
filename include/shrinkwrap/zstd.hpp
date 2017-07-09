@@ -107,7 +107,7 @@ namespace shrinkwrap
         if (gptr() < egptr()) // buffer not exhausted
           return traits_type::to_int_type(*gptr());
 
-        if (!ZSTD_isError(res_))
+        while (!ZSTD_isError(res_) && gptr() >= egptr() && (input_.pos < input_.size || !feof(fp_)))
         {
           if (input_.pos == input_.size && !feof(fp_))
           {
@@ -130,9 +130,9 @@ namespace shrinkwrap
           }
         }
 
-        if (gptr() >= egptr())
+        if (ZSTD_isError(res_))
           return traits_type::eof();
-        else if (ZSTD_isError(res_))
+        else if (gptr() >= egptr())
           return traits_type::eof();
 
         return traits_type::to_int_type(*gptr());
