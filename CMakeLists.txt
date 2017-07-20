@@ -38,14 +38,20 @@ if (NOT ZSTD_LIBRARIES)
 endif()
 
 add_library(shrinkwrap INTERFACE)
-target_sources(shrinkwrap INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/shrinkwrap/xz.hpp;${CMAKE_CURRENT_SOURCE_DIR}/include/shrinkwrap/gz.hpp;${CMAKE_CURRENT_SOURCE_DIR}/include/shrinkwrap/zstd.hpp;${CMAKE_CURRENT_SOURCE_DIR}/include/shrinkwrap/istream.hpp>)
-target_include_directories(shrinkwrap INTERFACE
-                           $<INSTALL_INTERFACE:include>
-                           $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
-target_link_libraries(shrinkwrap INTERFACE ${LIBLZMA_LIBRARIES} ${ZLIB_LIBRARIES} ${ZSTD_LIBRARIES})
+if (CMAKE_VERSION VERSION_GREATER 3.3)
+    target_sources(shrinkwrap INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/shrinkwrap/xz.hpp;${CMAKE_CURRENT_SOURCE_DIR}/include/shrinkwrap/gz.hpp;${CMAKE_CURRENT_SOURCE_DIR}/include/shrinkwrap/zstd.hpp;${CMAKE_CURRENT_SOURCE_DIR}/include/shrinkwrap/istream.hpp>)
+    target_include_directories(shrinkwrap INTERFACE
+                               $<INSTALL_INTERFACE:include>
+                               $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
+    target_link_libraries(shrinkwrap INTERFACE ${LIBLZMA_LIBRARIES} ${ZLIB_LIBRARIES} ${ZSTD_LIBRARIES})
 
-add_executable(shrinkwrap-test src/test.cpp)
-target_link_libraries(shrinkwrap-test shrinkwrap)
+    add_executable(shrinkwrap-test src/test.cpp)
+    target_link_libraries(shrinkwrap-test shrinkwrap)
+else()
+    add_executable(shrinkwrap-test src/test.cpp)
+    target_link_libraries(shrinkwrap-test ${LIBLZMA_LIBRARIES} ${ZLIB_LIBRARIES} ${ZSTD_LIBRARIES})
+    target_include_directories(shrinkwrap-test PUBLIC include)
+endif()
 
 add_test(xz_seek_test shrinkwrap-test xz-seek)
 add_test(xz_iterator_test shrinkwrap-test xz-iter)
@@ -58,12 +64,13 @@ add_test(generic_iterator_test shrinkwrap-test generic-iter)
 add_test(generic_seek_test shrinkwrap-test generic-seek)
 
 install(DIRECTORY include/shrinkwrap DESTINATION include)
-install(TARGETS shrinkwrap EXPORT ${PROJECT_NAME}-config
-        LIBRARY DESTINATION lib
-        ARCHIVE DESTINATION lib)
+if (CMAKE_VERSION VERSION_GREATER 3.3)
+    install(TARGETS shrinkwrap EXPORT ${PROJECT_NAME}-config
+            LIBRARY DESTINATION lib
+            ARCHIVE DESTINATION lib)
 
-install(EXPORT ${PROJECT_NAME}-config DESTINATION share/${PROJECT_NAME})
-write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config-version.cmake COMPATIBILITY SameMajorVersion)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config-version.cmake DESTINATION share/${PROJECT_NAME})
-
-export(EXPORT ${PROJECT_NAME}-config)
+    install(EXPORT ${PROJECT_NAME}-config DESTINATION share/${PROJECT_NAME})
+    write_basic_package_version_file(${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config-version.cmake COMPATIBILITY SameMajorVersion)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config-version.cmake DESTINATION share/${PROJECT_NAME})
+    export(EXPORT ${PROJECT_NAME}-config)
+endif()
