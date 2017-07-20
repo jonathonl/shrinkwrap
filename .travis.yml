@@ -19,11 +19,11 @@ addons:
       - python-dev
       - python-pip
 install:
-   - sudo pip install cget
-   - cget install -DCMAKE_POLICY_DEFAULT_CMP0048=NEW -f ./requirements.txt
-#   - curl -L https://github.com/facebook/zstd/archive/v1.2.0.tar.gz > zstd-v1.2.0.tar.gz
-#   - tar -xzf zstd-v1.2.0.tar.gz
-#   - cd zstd-1.2.0/ && cmake -DCMAKE_BUILD_TYPE=Release -DZSTD_BUILD_STATIC=1 build/cmake && make && sudo make install && cd ..
+#   - sudo pip install cget
+#   - cget install -DCMAKE_POLICY_DEFAULT_CMP0048=NEW -f ./requirements.txt
+   - curl -L https://github.com/facebook/zstd/archive/v1.2.0.tar.gz > zstd-v1.2.0.tar.gz
+   - tar -xzf zstd-v1.2.0.tar.gz
+   - cd zstd-1.2.0/ && cmake -DCMAKE_BUILD_TYPE=Release -DZSTD_BUILD_STATIC=1 build/cmake && make && sudo make install && cd ..
 #  - sudo apt-get install --yes --only-upgrade cmake-data
 #  - sudo apt-get install --yes --only-upgrade cmake
 script:
