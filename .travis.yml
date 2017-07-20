@@ -29,6 +29,6 @@ install:
 script:
   - cmake --version
   - mkdir build && cd build
-  - cmake -DCMAKE_C_COMPILER=/usr/bin/gcc-5 -DCMAKE_CXX_COMPILER=/usr/bin/g++-5 ..
+  - cmake -DCMAKE_TOOLCHAIN_FILE=../cget/cget/cget.cmake -DCMAKE_C_COMPILER=/usr/bin/gcc-5 -DCMAKE_CXX_COMPILER=/usr/bin/g++-5 ..
   - make
   - make CTEST_OUTPUT_ON_FAILURE=1 test
