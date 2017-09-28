@@ -190,7 +190,7 @@ namespace shrinkwrap
     class obuf : public std::streambuf
     {
     public:
-      obuf(FILE* fp)
+      obuf(FILE* fp, int compression_level)
         :
         strm_(ZSTD_createCStream()),
         fp_(fp),
@@ -205,7 +205,7 @@ namespace shrinkwrap
         }
         else
         {
-          res_ = ZSTD_initCStream(strm_, 3);
+          res_ = ZSTD_initCStream(strm_, compression_level);
           if (ZSTD_isError(res_))
           {
             // TODO: handle error.
@@ -216,7 +216,7 @@ namespace shrinkwrap
         }
       }
 
-      obuf(const std::string& file_path) : obuf(fopen(file_path.c_str(), "wb")) {}
+      obuf(const std::string& file_path, int compression_level = 3) : obuf(fopen(file_path.c_str(), "wb"), compression_level) {}
 
 #if !defined(__GNUC__) || defined(__clang__) || __GNUC__ > 4
       obuf(obuf&& src)
