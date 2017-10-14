@@ -43,6 +43,7 @@ ENDIF (ZSTD_LEGACY_SUPPORT)
 #-----------------------------------------------------------------------------
 # Add source directories
 #-----------------------------------------------------------------------------
+SET(ZSTD_BUILD_SHARED OFF CACHE BOOL "must be static" FORCE)
 ADD_SUBDIRECTORY(build/cmake/lib)
 
 IF (ZSTD_BUILD_PROGRAMS)

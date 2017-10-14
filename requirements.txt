@@ -1,2 +1,2 @@
 xz,http://tukaani.org/xz/xz-5.2.3.tar.bz2 --cmake dep/xz.cmake
-zstd,facebook/zstd@v1.2.0 --cmake dep/zstd.cmake
+zstd,facebook/zstd@v1.3.2 --cmake dep/zstd.cmake
