@@ -1,9 +1,9 @@
 #ifndef SHRINKWRAP_ZSTD_HPP
 #define SHRINKWRAP_ZSTD_HPP
 
-#ifndef ZSTD_STATIC_LINKING_ONLY
-#define ZSTD_STATIC_LINKING_ONLY
-#endif
+//#ifndef ZSTD_STATIC_LINKING_ONLY
+//#define ZSTD_STATIC_LINKING_ONLY
+//#endif
 
 #include <zstd.h>
 
@@ -116,7 +116,7 @@ namespace shrinkwrap
 
           if (res_ == 0 && input_.pos < input_.size)
           {
-            res_ = ZSTD_resetDStream(strm_);
+            res_ = ZSTD_initDStream(strm_); //ZSTD_resetDStream(strm_);
             current_block_position_ = std::size_t(ftell(fp_)) - (input_.size - input_.pos);
           }
 
@@ -196,6 +196,7 @@ namespace shrinkwrap
         fp_(fp),
         compressed_buffer_(ZSTD_CStreamOutSize()),
         decompressed_buffer_(ZSTD_CStreamInSize()),
+        compression_level_(compression_level),
         res_(0)
       {
         if (!fp_)
@@ -205,7 +206,7 @@ namespace shrinkwrap
         }
         else
         {
-          res_ = ZSTD_initCStream(strm_, compression_level);
+          res_ = ZSTD_initCStream(strm_, compression_level_);
           if (ZSTD_isError(res_))
           {
             // TODO: handle error.
@@ -333,7 +334,7 @@ namespace shrinkwrap
           if (ZSTD_isError(res_))
             return -1;
 
-          res_ = ZSTD_resetCStream(strm_, 0);
+          res_ = ZSTD_initCStream(strm_, compression_level_); //ZSTD_resetCStream(strm_, 0);
 
           setp((char*) decompressed_buffer_.data(), (char*) decompressed_buffer_.data() + decompressed_buffer_.size());
         }
@@ -346,6 +347,7 @@ namespace shrinkwrap
       std::vector<std::uint8_t> decompressed_buffer_;
       ZSTD_CStream* strm_;
       FILE* fp_;
+      int compression_level_;
       std::size_t res_;
     };
 

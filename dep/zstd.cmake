@@ -9,7 +9,7 @@
 
 PROJECT(zstd)
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8.9)
-OPTION(ZSTD_BUILD_STATIC "must be static" ON)
+#OPTION(ZSTD_BUILD_STATIC "must be static" ON)
 SET(ZSTD_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/build/cmake/CMakeModules")
 
@@ -43,7 +43,7 @@ ENDIF (ZSTD_LEGACY_SUPPORT)
 #-----------------------------------------------------------------------------
 # Add source directories
 #-----------------------------------------------------------------------------
-SET(ZSTD_BUILD_SHARED OFF CACHE BOOL "must be static" FORCE)
+#SET(ZSTD_BUILD_SHARED OFF CACHE BOOL "must be static" FORCE)
 ADD_SUBDIRECTORY(build/cmake/lib)
 
 IF (ZSTD_BUILD_PROGRAMS)
