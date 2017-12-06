@@ -196,6 +196,7 @@ namespace shrinkwrap
         fp_(fp),
         compressed_buffer_(ZSTD_CStreamOutSize()),
         decompressed_buffer_(ZSTD_CStreamInSize()),
+        block_position_(0),
         compression_level_(compression_level),
         res_(0)
       {
@@ -250,6 +251,7 @@ namespace shrinkwrap
       {
         compressed_buffer_ = std::move(src.compressed_buffer_);
         decompressed_buffer_ = std::move(src.decompressed_buffer_);
+        block_position_ = std::move(src.block_position_);
         strm_ = src.strm_;
         fp_ = src.fp_;
         src.fp_ = nullptr;
@@ -299,6 +301,16 @@ namespace shrinkwrap
         return (!ZSTD_isError(res_) ? traits_type::to_int_type(c) : traits_type::eof());
       }
 
+      virtual std::streambuf::pos_type seekoff(std::streambuf::off_type off, std::ios_base::seekdir way, std::ios_base::openmode which)
+      {
+        if (off == 0 && way == std::ios::cur)
+        {
+          return block_position_;
+        }
+        return pos_type(off_type(-1));
+      }
+
+
       virtual int sync()
       {
         if (!fp_)
@@ -337,6 +349,7 @@ namespace shrinkwrap
           res_ = ZSTD_initCStream(strm_, compression_level_); //ZSTD_resetCStream(strm_, 0);
 
           setp((char*) decompressed_buffer_.data(), (char*) decompressed_buffer_.data() + decompressed_buffer_.size());
+          block_position_ = ftell(fp_);
         }
 
         return 0;
@@ -345,6 +358,7 @@ namespace shrinkwrap
     private:
       std::vector<std::uint8_t> compressed_buffer_;
       std::vector<std::uint8_t> decompressed_buffer_;
+      std::streambuf::pos_type block_position_;
       ZSTD_CStream* strm_;
       FILE* fp_;
       int compression_level_;
