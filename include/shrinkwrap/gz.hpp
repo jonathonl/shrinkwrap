@@ -112,12 +112,12 @@ namespace shrinkwrap
         if (gptr() < egptr()) // buffer not exhausted
           return traits_type::to_int_type(*gptr());
 
-        while ((zlib_res_ == Z_OK || zlib_res_ == Z_STREAM_END) && gptr() >= egptr() && (zstrm_.avail_in > 0 || !feof(fp_)))
+        while ((zlib_res_ == Z_OK || zlib_res_ == Z_STREAM_END) && gptr() >= egptr() && (zstrm_.avail_in > 0 || (!feof(fp_) && !ferror(fp_))))
         {
           zstrm_.next_out = decompressed_buffer_.data();
           zstrm_.avail_out = static_cast<std::uint32_t>(decompressed_buffer_.size());
 
-          if (zstrm_.avail_in == 0 && !feof(fp_))
+          if (zstrm_.avail_in == 0 && !feof(fp_) && !ferror(fp_))
           {
             replenish_compressed_buffer();
           }

@@ -107,9 +107,9 @@ namespace shrinkwrap
         if (gptr() < egptr()) // buffer not exhausted
           return traits_type::to_int_type(*gptr());
 
-        while (!ZSTD_isError(res_) && gptr() >= egptr() && (input_.pos < input_.size || !feof(fp_)))
+        while (!ZSTD_isError(res_) && gptr() >= egptr() && (input_.pos < input_.size || (!feof(fp_) && !ferror(fp_))))
         {
-          if (input_.pos == input_.size && !feof(fp_))
+          if (input_.pos == input_.size && !feof(fp_) && !ferror(fp_))
           {
             replenish_compressed_buffer();
           }

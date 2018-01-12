@@ -85,7 +85,7 @@ namespace shrinkwrap
           if (at_block_boundary_)
           {
             std::vector<std::uint8_t> block_header(LZMA_BLOCK_HEADER_SIZE_MAX);
-            if (lzma_block_decoder_.avail_in == 0 && !feof(fp_))
+            if (lzma_block_decoder_.avail_in == 0 && !feof(fp_) && !ferror(fp_))
             {
               replenish_compressed_buffer();
             }
@@ -139,7 +139,7 @@ namespace shrinkwrap
 
           if (lzma_res_ == LZMA_OK)
           {
-            if (lzma_block_decoder_.avail_in == 0 && !feof(fp_))
+            if (lzma_block_decoder_.avail_in == 0 && !feof(fp_) && !ferror(fp_))
             {
               replenish_compressed_buffer();
             }
