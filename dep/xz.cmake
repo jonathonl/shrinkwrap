@@ -3,7 +3,7 @@ project(xz VERSION 5.2.3)
 
 execute_process(COMMAND ./configure --prefix=${CMAKE_INSTALL_PREFIX} WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
-add_custom_target(xz ALL COMMAND make WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} COMMENT "Builing xz ...")
+add_custom_target(xz ALL COMMAND make WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} COMMENT "Building xz ...")
 
 install(DIRECTORY src/liblzma/api/ DESTINATION include FILES_MATCHING PATTERN "*.h")
 
