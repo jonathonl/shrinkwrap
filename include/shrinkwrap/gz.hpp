@@ -487,8 +487,8 @@ namespace shrinkwrap
         :
         zstrm_({0}),
         fp_(fp),
-        compressed_buffer_(default_block_size),
-        decompressed_buffer_(default_block_size)
+        compressed_buffer_(bgzf_block_size),
+        decompressed_buffer_(bgzf_block_size)
       {
         if (!fp_)
         {
@@ -573,28 +573,30 @@ namespace shrinkwrap
         }
         else
         {
-          zstrm_.next_in = decompressed_buffer_.data();
-          zstrm_.avail_in = static_cast<std::uint32_t>(decompressed_buffer_.size());
-          while (zlib_res_ == Z_OK)
-          {
-            zlib_res_ = deflate(&zstrm_, Z_FINISH);
-
-            if (!fwrite(compressed_buffer_.data(), compressed_buffer_.size() - zstrm_.avail_out, 1, fp_))
-            {
-              // TODO: handle error.
-              return traits_type::eof();
-            }
-            zstrm_.next_out = compressed_buffer_.data();
-            zstrm_.avail_out = static_cast<std::uint32_t>(compressed_buffer_.size());
-
-          }
-
-          if (zlib_res_ == Z_STREAM_END)
-            zlib_res_ = deflateReset(&zstrm_);
-
-          assert(zstrm_.avail_in == 0);
-          decompressed_buffer_[0] = reinterpret_cast<unsigned char&>(c);
-          setp((char*) decompressed_buffer_.data() + 1, (char*) decompressed_buffer_.data() + decompressed_buffer_.size());
+          if (sync() != 0)
+            return traits_type::eof();
+//          zstrm_.next_in = decompressed_buffer_.data();
+//          zstrm_.avail_in = static_cast<std::uint32_t>(decompressed_buffer_.size());
+//          while (zlib_res_ == Z_OK)
+//          {
+//            zlib_res_ = deflate(&zstrm_, Z_FINISH);
+//
+//            if (!fwrite(compressed_buffer_.data(), compressed_buffer_.size() - zstrm_.avail_out, 1, fp_))
+//            {
+//              // TODO: handle error.
+//              return traits_type::eof();
+//            }
+//            zstrm_.next_out = compressed_buffer_.data();
+//            zstrm_.avail_out = static_cast<std::uint32_t>(compressed_buffer_.size());
+//
+//          }
+//
+//          if (zlib_res_ == Z_STREAM_END)
+//            zlib_res_ = deflateReset(&zstrm_);
+//
+//          assert(zstrm_.avail_in == 0);
+//          decompressed_buffer_[0] = reinterpret_cast<unsigned char&>(c);
+//          setp((char*) decompressed_buffer_.data() + 1, (char*) decompressed_buffer_.data() + decompressed_buffer_.size());
         }
 
         return (zlib_res_ == Z_OK ? traits_type::to_int_type(c) : traits_type::eof());
@@ -605,38 +607,143 @@ namespace shrinkwrap
         if (!fp_)
           return -1;
 
-        zstrm_.next_in = decompressed_buffer_.data();
-        zstrm_.avail_in = static_cast<std::uint32_t>(decompressed_buffer_.size() - (epptr() - pptr()));
-        if (zstrm_.avail_in)
+//        zstrm_.next_in = decompressed_buffer_.data();
+//        zstrm_.avail_in = static_cast<std::uint32_t>(decompressed_buffer_.size() - (epptr() - pptr()));
+//        if (zstrm_.avail_in)
+//        {
+//          while (zlib_res_ == Z_OK)
+//          {
+//            zlib_res_ = deflate(&zstrm_, Z_FINISH);
+//
+//            if (!fwrite(compressed_buffer_.data(), compressed_buffer_.size() - zstrm_.avail_out, 1, fp_))
+//            {
+//              // TODO: handle error.
+//              return -1;
+//            }
+//            zstrm_.next_out = compressed_buffer_.data();
+//            zstrm_.avail_out = static_cast<std::uint32_t>(compressed_buffer_.size());
+//
+//          }
+//
+//          if (zlib_res_ == Z_STREAM_END)
+//            zlib_res_ = deflateReset(&zstrm_);
+//
+//          if (zlib_res_ != Z_OK)
+//            return -1;
+//
+//          assert(zstrm_.avail_in == 0);
+//          setp((char*) decompressed_buffer_.data(), (char*) decompressed_buffer_.data() + decompressed_buffer_.size());
+//        }
+
+
+
+
+        /* BGZF/GZIP header (speciallized from RFC 1952; little endian):
+         * +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+         * | 31|139|  8|  4|              0|  0|255|      6| 66| 67|      2|BLK_LEN|
+         * +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+         */
+        const uint8_t magic[19] = "\037\213\010\4\0\0\0\0\0\377\6\0\102\103\2\0\0\0";
+
+        std::uint32_t input_length = static_cast<std::uint32_t>(decompressed_buffer_.size() - (epptr() - pptr()));
+        std::uint32_t block_length = input_length;
+        std::uint8_t *buffer = compressed_buffer_.data();
+        int buffer_size = bgzf_block_size;
+
+        int compressed_length = 0;
+        int remaining;
+        std::uint32_t crc;
+
+        assert(block_length <= bgzf_block_size); // guaranteed by the caller
+
+        std::memcpy(buffer, magic, block_header_length); // the last two bytes are a place holder for the length of the block
+        while (true) // loop to retry for blocks that do not compress enough
         {
-          while (zlib_res_ == Z_OK)
-          {
-            zlib_res_ = deflate(&zstrm_, Z_FINISH);
+          z_stream zs{0};
 
-            if (!fwrite(compressed_buffer_.data(), compressed_buffer_.size() - zstrm_.avail_out, 1, fp_))
-            {
-              // TODO: handle error.
-              return -1;
-            }
-            zstrm_.next_out = compressed_buffer_.data();
-            zstrm_.avail_out = static_cast<std::uint32_t>(compressed_buffer_.size());
+          zs.next_in = decompressed_buffer_.data();
+          zs.avail_in = block_length;
+          zs.next_out = &buffer[block_header_length];
+          zs.avail_out = static_cast<std::uint32_t>(compressed_buffer_.size());
+          //zs.avail_out = buffer_size - BLOCK_HEADER_LENGTH - BLOCK_FOOTER_LENGTH;
 
-          }
-
-          if (zlib_res_ == Z_STREAM_END)
-            zlib_res_ = deflateReset(&zstrm_);
-
+          zlib_res_ = deflateInit2(&zs, Z_DEFAULT_COMPRESSION, Z_DEFLATED, -15, 8, Z_DEFAULT_STRATEGY); // -15 to disable zlib header/footer
           if (zlib_res_ != Z_OK)
+          {
+            // TODO: handle error.
             return -1;
-
-          assert(zstrm_.avail_in == 0);
-          setp((char*) decompressed_buffer_.data(), (char*) decompressed_buffer_.data() + decompressed_buffer_.size());
+          }
+          zlib_res_ = deflate(&zs, Z_FINISH);
+          if (zlib_res_ != Z_STREAM_END)  // not compressed enough
+          {
+            deflateEnd(&zs); // reset the stream
+            if (zlib_res_ == Z_OK) // reduce the size and recompress
+            {
+              input_length -= 1024;
+              assert(input_length > 0); // logically, this should not happen
+              continue;
+            }
+            // TODO: handle error.
+            return -1;
+          }
+          if (deflateEnd(&zs) != Z_OK)
+          {
+            // TODO: handle error.
+            return -1;
+          }
+          compressed_length = zs.total_out;
+          compressed_length += block_header_length + block_footer_length;
+          assert(compressed_length <= bgzf_block_size);
+          break;
         }
+
+        assert(compressed_length > 0);
+        pack_int_16((uint8_t*)&buffer[16], compressed_length - 1); // write the compressed_length; -1 to fit 2 bytes
+        crc = crc32(0L, NULL, 0L);
+        crc = crc32(crc, decompressed_buffer_.data(), input_length);
+        pack_int_32((uint8_t*)&buffer[compressed_length-8], crc);
+        pack_int_32((uint8_t*)&buffer[compressed_length-4], input_length);
+
+        if (!fwrite(compressed_buffer_.data(), compressed_length, 1, fp_))
+        {
+          // TODO: handle error.
+          return -1;
+        }
+
+        remaining = block_length - input_length;
+        if (remaining > 0) {
+          assert(remaining <= input_length);
+          memcpy(decompressed_buffer_.data(), decompressed_buffer_.data() + input_length, remaining);
+        }
+        setp((char*) decompressed_buffer_.data() + remaining, (char*) decompressed_buffer_.data() + decompressed_buffer_.size());
+
+
+
+        // TODO: fp->block_offset = remaining;
 
         return 0;
       }
 
+      static void pack_int_16(uint8_t *buffer, uint16_t value)
+      {
+        buffer[0] = uint8_t(value);
+        buffer[1] = uint8_t(value >> 8);
+      }
+
+      static void pack_int_32(uint8_t *buffer, uint32_t value)
+      {
+        buffer[0] = uint8_t(value);
+        buffer[1] = uint8_t(value >> 8);
+        buffer[2] = uint8_t(value >> 16);
+        buffer[3] = uint8_t(value >> 24);
+      }
+
     private:
+      static const std::size_t block_header_length = 18;
+      static const std::size_t block_footer_length = 8;
+      static const std::size_t bgzf_block_size = 0x10000; // 64k
+
+
       static const std::size_t default_block_size = 64 * 1024;
       std::vector<std::uint8_t> compressed_buffer_;
       std::vector<std::uint8_t> decompressed_buffer_;
