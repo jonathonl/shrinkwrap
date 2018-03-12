@@ -46,7 +46,7 @@ while (std::cin)
 ## BGZF (Blocked GNU Zip Format)  
 ```c++
 std::array<char, 1024> buf;
-shrinkwrap::bgz::istream is("file.xz");
+shrinkwrap::bgzf::istream is("file.xz");
 is.read(buf.data(), buf.size());
 
 // (gzip_block_position << 16) | relative_uncompressed_offset
