@@ -483,7 +483,7 @@ namespace shrinkwrap
     class obuf : public std::streambuf
     {
     public:
-      obuf(FILE* fp)
+      obuf(FILE* fp, std::ios::open_mode mode = std::ios::out)
         :
         fp_(fp),
         compressed_buffer_(bgzf_block_size),
@@ -498,10 +498,33 @@ namespace shrinkwrap
         {
           char* end = ((char*) decompressed_buffer_.data()) + decompressed_buffer_.size();
           setp((char*) decompressed_buffer_.data(), end);
+
+          if (mode & std::ios::app)
+          {
+            bool has_eof = false;
+
+            const std::array<std::uint8_t, 28> empty_block = {31, 139, 10, 4, 0, 0, 0, 0, 0, 255, 6, 0, 66, 67, 2, 0, 27, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+            std::array<std::uint8_t, 28>  buf;
+
+            fseek(fp_, -28, SEEK_END);
+            fread(buf.data(), buf.size(), 1, fp_);
+
+            if (memcmp(empty_block.data(), buf.data(), buf.size()) == 0)
+            {
+              // Overwrite the trailing EOF.
+              fseek(fp_, -28, SEEK_END);
+            }
+            else
+            {
+              // No trailing EOF block, so go to the end
+              fseek(fp_, 0, SEEK_END);
+            }
+
+          }
         }
       }
 
-      obuf(const std::string& file_path) : obuf(fopen(file_path.c_str(), "wb")) {}
+      obuf(const std::string& file_path, std::ios::open_mode mode = std::ios::out) : obuf(fopen(file_path.c_str(), mode & std::ios::app ? "r+b" : "wb"), mode) {}
 #if !defined(__GNUC__) || defined(__clang__) || __GNUC__ > 4
       obuf(obuf&& src)
         :
@@ -541,6 +564,7 @@ namespace shrinkwrap
         if (fp_)
         {
           sync();
+          write_compressed_block(0); // write an empty block
 
           fclose(fp_);
           fp_ = nullptr;
@@ -577,6 +601,14 @@ namespace shrinkwrap
 
       virtual int sync()
       {
+        std::uint32_t block_length = static_cast<std::uint32_t>(decompressed_buffer_.size() - (epptr() - pptr()));
+        if (block_length)
+          return write_compressed_block(block_length);
+        return 0;
+      }
+
+      int write_compressed_block(std::uint32_t block_length)
+      {
         if (!fp_)
           return -1;
 
@@ -585,9 +617,8 @@ namespace shrinkwrap
          * | 31|139|  8|  4|              0|  0|255|      6| 66| 67|      2|BLK_LEN|
          * +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
          */
-        const uint8_t magic[19] = "\037\213\010\4\0\0\0\0\0\377\6\0\102\103\2\0\0\0";
+        const std::array<uint8_t, block_header_length> block_header = {31, 139, 8, 4, 0, 0, 0, 0, 0, 255, 6, 0, 66, 67, 2, 0, 0, 0};
 
-        std::uint32_t block_length = static_cast<std::uint32_t>(decompressed_buffer_.size() - (epptr() - pptr()));
         std::uint32_t input_length = block_length;
         std::uint8_t *buffer = compressed_buffer_.data();
         std::uint32_t buffer_size = bgzf_block_size;
@@ -598,7 +629,7 @@ namespace shrinkwrap
 
         assert(block_length <= bgzf_block_size); // guaranteed by the caller
 
-        std::memcpy(buffer, magic, block_header_length); // the last two bytes are a place holder for the length of the block
+        std::memcpy(buffer, block_header.data(), block_header_length); // the last two bytes are a place holder for the length of the block
 
         z_stream zs;
         int zlib_res = Z_OK;
@@ -717,7 +748,7 @@ namespace shrinkwrap
     class ostream : public std::ostream
     {
     public:
-      ostream(const std::string& file_path)
+      ostream(const std::string& file_path, std::ios::open_mode mode = std::ios::out)
         :
         std::ostream(&sbuf_),
         sbuf_(file_path)
