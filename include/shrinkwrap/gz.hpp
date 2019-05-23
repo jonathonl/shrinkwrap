@@ -83,7 +83,8 @@ namespace shrinkwrap
 
       void move(ibuf&& src)
       {
-        zstrm_ = src.zstrm_;
+        inflateCopy(&zstrm_, &(src.zstrm_)); //zstrm_ = src.zstrm_;
+        zstrm_.msg = src.zstrm_.msg;
         src.zstrm_ = {0};
         compressed_buffer_ = std::move(src.compressed_buffer_);
         decompressed_buffer_ = std::move(src.decompressed_buffer_);
