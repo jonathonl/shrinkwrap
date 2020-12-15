@@ -197,6 +197,7 @@ namespace shrinkwrap
         compressed_buffer_(ZSTD_CStreamOutSize()),
         decompressed_buffer_(ZSTD_CStreamInSize()),
         block_position_(0),
+        total_compressed_bytes_written_(0),
         compression_level_(compression_level),
         res_(0)
       {
@@ -252,6 +253,7 @@ namespace shrinkwrap
         compressed_buffer_ = std::move(src.compressed_buffer_);
         decompressed_buffer_ = std::move(src.decompressed_buffer_);
         block_position_ = std::move(src.block_position_);
+        total_compressed_bytes_written_ = src.total_compressed_bytes_written_;
         strm_ = src.strm_;
         fp_ = src.fp_;
         src.fp_ = nullptr;
@@ -292,6 +294,7 @@ namespace shrinkwrap
               // TODO: handle error.
               return traits_type::eof();
             }
+            total_compressed_bytes_written_ += output.pos;
           }
 
           decompressed_buffer_[0] = reinterpret_cast<unsigned char&>(c);
@@ -330,6 +333,7 @@ namespace shrinkwrap
               // TODO: handle error.
               return -1;
             }
+            total_compressed_bytes_written_ += output.pos;
           }
 
           while (!ZSTD_isError(res_) && res_ != 0)
@@ -341,6 +345,7 @@ namespace shrinkwrap
               // TODO: handle error.
               return -1;
             }
+            total_compressed_bytes_written_ += output.pos;
           }
 
           if (ZSTD_isError(res_))
@@ -349,7 +354,8 @@ namespace shrinkwrap
           res_ = ZSTD_initCStream(strm_, compression_level_); //ZSTD_resetCStream(strm_, 0);
 
           setp((char*) decompressed_buffer_.data(), (char*) decompressed_buffer_.data() + decompressed_buffer_.size());
-          block_position_ = ftell(fp_);
+          assert(ftell(fp_) == -1 || ftell(fp_) == total_compressed_bytes_written_); // ftell() returns -1 when output file is piped stream
+          block_position_ = total_compressed_bytes_written_; // ftell(fp_);
         }
 
         return 0;
@@ -359,6 +365,7 @@ namespace shrinkwrap
       std::vector<std::uint8_t> compressed_buffer_;
       std::vector<std::uint8_t> decompressed_buffer_;
       std::streambuf::pos_type block_position_;
+      std::size_t total_compressed_bytes_written_;
       ZSTD_CStream* strm_;
       FILE* fp_;
       int compression_level_;
