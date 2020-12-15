@@ -40,7 +40,7 @@ endif()
 
 add_library(shrinkwrap INTERFACE)
 if (CMAKE_VERSION VERSION_GREATER 3.3)
-    target_sources(shrinkwrap INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/shrinkwrap/xz.hpp;${CMAKE_CURRENT_SOURCE_DIR}/include/shrinkwrap/gz.hpp;${CMAKE_CURRENT_SOURCE_DIR}/include/shrinkwrap/zstd.hpp;${CMAKE_CURRENT_SOURCE_DIR}/include/shrinkwrap/istream.hpp>)
+    target_sources(shrinkwrap INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/shrinkwrap/stdio.hpp;${CMAKE_CURRENT_SOURCE_DIR}/include/shrinkwrap/xz.hpp;${CMAKE_CURRENT_SOURCE_DIR}/include/shrinkwrap/gz.hpp;${CMAKE_CURRENT_SOURCE_DIR}/include/shrinkwrap/zstd.hpp;${CMAKE_CURRENT_SOURCE_DIR}/include/shrinkwrap/istream.hpp>)
     target_include_directories(shrinkwrap INTERFACE
                                $<INSTALL_INTERFACE:include>
                                $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
@@ -54,6 +54,8 @@ else()
     target_include_directories(shrinkwrap-test PUBLIC include)
 endif()
 
+add_test(stdio_iterator_test shrinkwrap-test stdio-iter)
+add_test(stdio_seek_test shrinkwrap-test stdio-seek)
 add_test(xz_seek_test shrinkwrap-test xz-seek)
 add_test(xz_iterator_test shrinkwrap-test xz-iter)
 add_test(gz_iterator_test shrinkwrap-test gz-iter)

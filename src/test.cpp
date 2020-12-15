@@ -350,6 +350,14 @@ int main(int argc, char* argv[])
       ret = !(block_seek_test<sw::zstd::istream, sw::zstd::ostream>("test_seek_file.txt.zst")()
         && block_seek_test<sw::zstd::istream, sw::zstd::ostream>("test_seek_file_512.txt.zst", 512)()
         && block_seek_test<sw::zstd::istream, sw::zstd::ostream>("test_seek_file_1024.txt.zst", 1024)());
+    else if (sub_command == "stdio-iter")
+      ret = !(iterator_test<sw::stdio::istream, sw::stdio::ostream>("test_iterator_file.txt")()
+        && iterator_test<sw::stdio::istream, sw::stdio::ostream>("test_iterator_file_512.txt", 512)()
+        && iterator_test<sw::stdio::istream, sw::stdio::ostream>("test_iterator_file_1024.txt", 1024)());
+    else if (sub_command == "stdio-seek")
+      ret = !(seek_test<sw::stdio::istream, sw::stdio::ostream>("test_seek_file.txt")()
+        && seek_test<sw::stdio::istream, sw::stdio::ostream>("test_seek_file_512.txt", 512)()
+        && seek_test<sw::stdio::istream, sw::stdio::ostream>("test_seek_file_1024.txt", 1024)());
   }
 
   return ret;

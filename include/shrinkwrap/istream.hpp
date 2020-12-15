@@ -1,6 +1,7 @@
 #ifndef SHRINKWRAP_ISTREAM_HPP
 #define SHRINKWRAP_ISTREAM_HPP
 
+#include "stdio.hpp"
 #include "xz.hpp"
 #include "gz.hpp"
 #include "zstd.hpp"
