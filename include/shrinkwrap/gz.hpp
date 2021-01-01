@@ -608,6 +608,10 @@ namespace shrinkwrap
         std::uint32_t block_length = static_cast<std::uint32_t>(decompressed_buffer_.size() - (epptr() - pptr()));
         if (block_length)
           return write_compressed_block(block_length);
+
+        if (fflush(fp_) != 0)
+          return -1;
+
         return 0;
       }
 
