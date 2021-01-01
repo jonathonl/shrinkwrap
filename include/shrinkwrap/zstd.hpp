@@ -358,6 +358,9 @@ namespace shrinkwrap
           block_position_ = total_compressed_bytes_written_; // ftell(fp_);
         }
 
+        if (fflush(fp_) != 0)
+          return -1;
+
         return 0;
       }
 

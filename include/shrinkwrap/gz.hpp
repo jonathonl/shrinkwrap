@@ -327,6 +327,9 @@ namespace shrinkwrap
           setp((char*) decompressed_buffer_.data(), (char*) decompressed_buffer_.data() + decompressed_buffer_.size());
         }
 
+        if (fflush(fp_) != 0)
+          return -1;
+
         return 0;
       }
 
