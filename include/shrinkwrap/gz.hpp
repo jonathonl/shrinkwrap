@@ -479,6 +479,7 @@ namespace shrinkwrap
         zlib_res_ = inflateReset(&zstrm_);
         char* end = egptr();
         setg(end, end, end);
+        uncompressed_block_offset_ = 0;
 
         return pos;
       }
