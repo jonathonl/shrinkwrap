@@ -27,15 +27,15 @@ find_library(ZSTD_LIBRARIES
              NAMES ${ZSTD_LIB_NAME})
 
 if (NOT LIBLZMA_LIBRARIES)
-    message(FATAL_ERROR "lzma library not found")
+    message(WARNING "lzma library not found")
 endif()
 
 if (NOT ZLIB_LIBRARIES)
-    message(FATAL_ERROR "zlib library not found")
+    message(WARNING "zlib library not found")
 endif()
 
 if (NOT ZSTD_LIBRARIES)
-    message(FATAL_ERROR "zstd library not found")
+    message(WARNING "zstd library not found")
 endif()
 
 add_library(shrinkwrap INTERFACE)
