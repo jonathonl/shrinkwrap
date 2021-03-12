@@ -5,22 +5,22 @@ include(CMakePackageConfigHelpers)
 
 set(CMAKE_CXX_STANDARD 11)
 
-#find_library(LIBLZMA_LIBRARIES
-#             NAMES liblzma.a lzma)
+find_library(LIBLZMA_LIBRARIES
+             NAMES liblzma.a lzma)
+
+find_library(ZLIB_LIBRARIES
+             NAMES libz.a z)
+
+find_library(ZSTD_LIBRARIES
+             NAMES libzstd.a zstd)
+
+#list(PREPEND CMAKE_FIND_LIBRARY_SUFFIXES .a)
 #
-#find_library(ZLIB_LIBRARIES
-#             NAMES libz.a z)
+#find_library(LIBLZMA_LIBRARIES lzma)
 #
-#find_library(ZSTD_LIBRARIES
-#             NAMES libzstd.a zstd)
-
-list(PREPEND CMAKE_FIND_LIBRARY_SUFFIXES .a)
-
-find_library(LIBLZMA_LIBRARIES lzma)
-
-find_library(ZLIB_LIBRARIES z)
-
-find_library(ZSTD_LIBRARIES zstd)
+#find_library(ZLIB_LIBRARIES z)
+#
+#find_library(ZSTD_LIBRARIES zstd)
 
 if (NOT LIBLZMA_LIBRARIES)
     message(WARNING "lzma library not found")
