@@ -1,30 +1,26 @@
 cmake_minimum_required(VERSION 3.2)
-include(ExternalProject)
-include(CMakePackageConfigHelpers)
 project(shrinkwrap VERSION 1.0.0)
 
-enable_testing()
+include(CMakePackageConfigHelpers)
 
 set(CMAKE_CXX_STANDARD 11)
 
-if (BUILD_SHARED_LIBS)
-    set(LIBLZMA_LIB_NAME ${CMAKE_SHARED_LIBRARY_PREFIX}lzma${CMAKE_SHARED_LIBRARY_SUFFIX})
-    set(ZLIB_LIB_NAME ${CMAKE_SHARED_LIBRARY_PREFIX}z${CMAKE_SHARED_LIBRARY_SUFFIX})
-    set(ZSTD_LIB_NAME ${CMAKE_SHARED_LIBRARY_PREFIX}zstd${CMAKE_SHARED_LIBRARY_SUFFIX})
-else()
-    set(LIBLZMA_LIB_NAME ${CMAKE_STATIC_LIBRARY_PREFIX}lzma${CMAKE_STATIC_LIBRARY_SUFFIX})
-    set(ZLIB_LIB_NAME ${CMAKE_STATIC_LIBRARY_PREFIX}z${CMAKE_STATIC_LIBRARY_SUFFIX})
-    set(ZSTD_LIB_NAME ${CMAKE_STATIC_LIBRARY_PREFIX}zstd${CMAKE_STATIC_LIBRARY_SUFFIX})
-endif()
+#find_library(LIBLZMA_LIBRARIES
+#             NAMES liblzma.a lzma)
+#
+#find_library(ZLIB_LIBRARIES
+#             NAMES libz.a z)
+#
+#find_library(ZSTD_LIBRARIES
+#             NAMES libzstd.a zstd)
 
-find_library(LIBLZMA_LIBRARIES
-             NAMES ${LIBLZMA_LIB_NAME})
+list(PREPEND CMAKE_FIND_LIBRARY_SUFFIXES .a)
 
-find_library(ZLIB_LIBRARIES
-             NAMES ${ZLIB_LIB_NAME})
+find_library(LIBLZMA_LIBRARIES lzma)
 
-find_library(ZSTD_LIBRARIES
-             NAMES ${ZSTD_LIB_NAME})
+find_library(ZLIB_LIBRARIES z)
+
+find_library(ZSTD_LIBRARIES zstd)
 
 if (NOT LIBLZMA_LIBRARIES)
     message(WARNING "lzma library not found")
@@ -59,6 +55,7 @@ else()
 endif()
 
 if (BUILD_TESTS)
+    enable_testing()
     add_test(stdio_iterator_test shrinkwrap-test stdio-iter)
     add_test(stdio_seek_test shrinkwrap-test stdio-seek)
     add_test(xz_seek_test shrinkwrap-test xz-seek)
