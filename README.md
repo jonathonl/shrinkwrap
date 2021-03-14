@@ -1,5 +1,5 @@
 # Shrinkwrap
-[![Anaconda-Server Badge](https://anaconda.org/conda-forge/shrinkwrap/badges/installer/conda.svg)](https://conda.anaconda.org/conda-forge)
+[![Anaconda-Server Badge](https://anaconda.org/conda-forge/shrinkwrap/badges/installer/conda.svg)](https://anaconda.org/conda-forge/shrinkwrap)
 
 A std::streambuf wrapper for compression formats.
 
