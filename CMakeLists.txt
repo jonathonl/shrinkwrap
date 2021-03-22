@@ -43,7 +43,17 @@ if (CMAKE_VERSION VERSION_GREATER 3.3)
     target_include_directories(shrinkwrap INTERFACE
                                $<INSTALL_INTERFACE:include>
                                $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
-    target_link_libraries(shrinkwrap INTERFACE ${LIBLZMA_LIBRARIES} ${ZLIB_LIBRARIES} ${ZSTD_LIBRARIES})
+    if (LIBLZMA_LIBRARIES)
+      target_link_libraries(shrinkwrap INTERFACE ${LIBLZMA_LIBRARIES})
+    endif()
+
+    if (ZLIB_LIBRARIES)
+      target_link_libraries(shrinkwrap INTERFACE ${ZLIB_LIBRARIES})
+    endif()
+
+    if (ZSTD_LIBRARIES)
+      target_link_libraries(shrinkwrap INTERFACE ${ZSTD_LIBRARIES})
+    endif()
 
     if (BUILD_TESTS)
         add_executable(shrinkwrap-test src/test.cpp)
@@ -58,6 +68,10 @@ else()
 endif()
 
 if (BUILD_TESTS)
+    if (NOT LIBLZMA_LIBRARIES OR NOT ZLIB_LIBRARIES OR NOT ZSTD_LIBRARIES)
+      message(FATAL_ERROR "lzma, zlib, and zstd libraries are required for tests")
+    endif()
+
     enable_testing()
     add_test(stdio_iterator_test shrinkwrap-test stdio-iter)
     add_test(stdio_seek_test shrinkwrap-test stdio-seek)
