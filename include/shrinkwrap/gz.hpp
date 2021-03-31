@@ -488,7 +488,7 @@ namespace shrinkwrap
     class obuf : public std::streambuf
     {
     public:
-      obuf(FILE* fp, std::ios::open_mode mode = std::ios::out)
+      obuf(FILE* fp, std::ios::openmode mode = std::ios::out)
         :
         fp_(fp),
         compressed_buffer_(bgzf_block_size),
@@ -529,7 +529,7 @@ namespace shrinkwrap
         }
       }
 
-      obuf(const std::string& file_path, std::ios::open_mode mode = std::ios::out) : obuf(fopen(file_path.c_str(), mode & std::ios::app ? "r+b" : "wb"), mode) {}
+      obuf(const std::string& file_path, std::ios::openmode mode = std::ios::out) : obuf(fopen(file_path.c_str(), mode & std::ios::app ? "r+b" : "wb"), mode) {}
 #if !defined(__GNUC__) || defined(__clang__) || __GNUC__ > 4
       obuf(obuf&& src)
         :
@@ -757,7 +757,7 @@ namespace shrinkwrap
     class ostream : public std::ostream
     {
     public:
-      ostream(const std::string& file_path, std::ios::open_mode mode = std::ios::out)
+      ostream(const std::string& file_path, std::ios::openmode mode = std::ios::out)
         :
         std::ostream(&sbuf_),
         sbuf_(file_path)
