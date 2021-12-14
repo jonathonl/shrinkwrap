@@ -44,8 +44,7 @@ namespace shrinkwrap
           sbuf_ = detail::make_unique<::shrinkwrap::zstd::ibuf>(fp);
           break;
         default:
-          throw std::runtime_error("raw files not yet supported.");
-
+          sbuf_ = detail::make_unique<::shrinkwrap::stdio::filebuf>(fp);
       }
 
       this->rdbuf(sbuf_.get());
