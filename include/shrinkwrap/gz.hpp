@@ -181,12 +181,13 @@ namespace shrinkwrap
     class obuf : public std::streambuf
     {
     public:
-      obuf(FILE* fp)
+      obuf(FILE* fp, int clevel = Z_DEFAULT_COMPRESSION)
         :
         zstrm_({0}),
         fp_(fp),
         compressed_buffer_(default_block_size),
-        decompressed_buffer_(default_block_size)
+        decompressed_buffer_(default_block_size),
+        compression_level_(clevel)
       {
         if (!fp_)
         {
@@ -195,7 +196,7 @@ namespace shrinkwrap
         }
         else
         {
-          zlib_res_ = deflateInit2(&zstrm_, Z_DEFAULT_COMPRESSION, Z_DEFLATED, (15 | 16), 8, Z_DEFAULT_STRATEGY); // |16 for GZIP
+          zlib_res_ = deflateInit2(&zstrm_, compression_level_, Z_DEFLATED, (15 | 16), 8, Z_DEFAULT_STRATEGY); // |16 for GZIP
           if (zlib_res_ != Z_OK)
           {
             // TODO: handle error.
@@ -209,7 +210,7 @@ namespace shrinkwrap
         }
       }
 
-      obuf(const std::string& file_path) : obuf(fopen(file_path.c_str(), "wb")) {}
+      obuf(const std::string& file_path, int clevel = Z_DEFAULT_COMPRESSION) : obuf(fopen(file_path.c_str(), "wb"), clevel) {}
 #if !defined(__GNUC__) || defined(__clang__) || __GNUC__ > 4
       obuf(obuf&& src)
         :
@@ -244,6 +245,7 @@ namespace shrinkwrap
         fp_ = src.fp_;
         src.fp_ = nullptr;
         zlib_res_ = src.zlib_res_;
+        compression_level_ = src.compression_level_;
       }
 
       void close()
@@ -340,6 +342,7 @@ namespace shrinkwrap
       z_stream zstrm_;
       FILE* fp_;
       int zlib_res_;
+      int compression_level_;
     };
 
     class istream : public std::istream
@@ -488,11 +491,12 @@ namespace shrinkwrap
     class obuf : public std::streambuf
     {
     public:
-      obuf(FILE* fp, std::ios::openmode mode = std::ios::out)
+      obuf(FILE* fp, int clevel = 6, std::ios::openmode mode = std::ios::out)
         :
         fp_(fp),
         compressed_buffer_(bgzf_block_size),
-        decompressed_buffer_(bgzf_block_size)
+        decompressed_buffer_(bgzf_block_size),
+        compression_level_(clevel)
       {
         if (!fp_ || ferror(fp_))
         {
@@ -529,7 +533,7 @@ namespace shrinkwrap
         }
       }
 
-      obuf(const std::string& file_path, std::ios::openmode mode = std::ios::out) : obuf(fopen(file_path.c_str(), mode & std::ios::app ? "r+b" : "wb"), mode) {}
+      obuf(const std::string& file_path, int clevel = 6, std::ios::openmode mode = std::ios::out) : obuf(fopen(file_path.c_str(), mode & std::ios::app ? "r+b" : "wb"), clevel, mode) {}
 #if !defined(__GNUC__) || defined(__clang__) || __GNUC__ > 4
       obuf(obuf&& src)
         :
@@ -562,6 +566,7 @@ namespace shrinkwrap
         decompressed_buffer_ = std::move(src.decompressed_buffer_);
         fp_ = src.fp_;
         src.fp_ = nullptr;
+        compression_level_ = src.compression_level_;
       }
 
       void close()
@@ -651,7 +656,7 @@ namespace shrinkwrap
           zs.avail_out = static_cast<std::uint32_t>(compressed_buffer_.size());
           //zs.avail_out = buffer_size - BLOCK_HEADER_LENGTH - BLOCK_FOOTER_LENGTH;
 
-          zlib_res = deflateInit2(&zs, Z_DEFAULT_COMPRESSION, Z_DEFLATED, -15, 8, Z_DEFAULT_STRATEGY); // -15 to disable zlib header/footer
+          zlib_res = deflateInit2(&zs, compression_level_, Z_DEFLATED, -15, 8, Z_DEFAULT_STRATEGY); // -15 to disable zlib header/footer
           if (zlib_res == Z_OK)
           {
             zlib_res = deflate(&zs, Z_FINISH);
@@ -721,6 +726,7 @@ namespace shrinkwrap
       std::vector<std::uint8_t> compressed_buffer_;
       std::vector<std::uint8_t> decompressed_buffer_;
       FILE* fp_;
+      int compression_level_;
     };
 
     class istream : public std::istream
