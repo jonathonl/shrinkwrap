@@ -443,6 +443,9 @@ namespace shrinkwrap
       {
         if (off == 0 && way == std::ios::cur)
         {
+          if (egptr() - gptr() == 0 && zlib_res_ == Z_OK) 
+            underflow(); // Prevents incorrect virtual offset when end of block aligns with end of buffer.
+
           if (egptr() - gptr() == 0 && zlib_res_ == Z_STREAM_END)
           {
             std::uint64_t compressed_offset = std::size_t(ftell(fp_)) - zstrm_.avail_in;
