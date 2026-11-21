@@ -1,6 +1,7 @@
 #ifndef SHRINKWRAP_XZ_HPP
 #define SHRINKWRAP_XZ_HPP
 
+#include <cstdint>
 #include <streambuf>
 #include <array>
 #include <vector>
