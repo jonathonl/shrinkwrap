@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.2)
-project(shrinkwrap VERSION 1.2.0)
+project(shrinkwrap VERSION 1.2.1)
 
 include(CMakePackageConfigHelpers)
 
